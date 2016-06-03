@@ -1,5 +1,7 @@
 package net.batchik.crdt.datatypes;
 
+import java.nio.ByteBuffer;
+
 /**
  * A state-based counter that supports both incrementing and decrementing it
  */
@@ -34,6 +36,17 @@ public class PNCounter extends Type<Integer, PNCounter> {
             sum -= N[i];
         }
         return sum;
+    }
+
+    @Override
+    public ByteBuffer serialize() {
+        ByteBuffer buffer = ByteBuffer.allocate(4 + 4 * (P.length + N.length));
+        buffer.putInt(P.length);
+        for (int i = 0 ; i < size ; i++) {
+            buffer.putInt(P[i]);
+            buffer.putInt(N[i]);
+        }
+        return buffer;
     }
 
     public void merge(PNCounter counter) {

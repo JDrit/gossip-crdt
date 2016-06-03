@@ -13,9 +13,9 @@ struct Digest {
 service GossipService {
     // When p and q start gossiping, they first exchange digests
     // {(r, max(μ_p (r))) | r ∈ P} and {(r, max(μ_q (r))) | r ∈ P}
-    map<i64, i64> initial(1: map<i64, i64> request);
+    map<i32, i64> initial(1: map<i32, i64> request);
 
     // On receipt, p sends to q
     // {(r, k,v, n) | μ_p(r)(k) = (v, n) ∧ n > max(μ_q (r))}
-    list<Digest> digests(1: list<Digest> digests);
+    list<Digest> digests(1: i32 qId, 2: list<Digest> digests);
 }

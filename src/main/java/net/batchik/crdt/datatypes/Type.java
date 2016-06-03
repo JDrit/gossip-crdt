@@ -1,5 +1,7 @@
 package net.batchik.crdt.datatypes;
 
+import java.nio.ByteBuffer;
+
 public abstract class Type<S, T> implements Mergeable<T> {
     private int id;
 
@@ -13,4 +15,5 @@ public abstract class Type<S, T> implements Mergeable<T> {
 
     public abstract S value();
 
+    public abstract ByteBuffer serialize();
 }

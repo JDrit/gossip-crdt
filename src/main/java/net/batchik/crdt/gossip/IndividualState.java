@@ -1,11 +1,13 @@
-package net.batchik.crdt;
+package net.batchik.crdt.gossip;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.batchik.crdt.datatypes.Type;
+import net.batchik.crdt.gossip.datatypes.PNCounter;
+import net.batchik.crdt.gossip.datatypes.Type;
+
 
 public class IndividualState {
     private HashMap<String, Tuple<Type, Long>> state;
@@ -29,6 +31,19 @@ public class IndividualState {
         }
     }
 
+    public synchronized void incrementCounter(String key, int id) {
+        Tuple<Type, Long> tuple = state.get(key);
+        if (tuple == null) {
+            state.put(key, new Tuple<>(new PNCounter(2, id), 0L));
+        } else {
+            if (tuple.fst instanceof PNCounter) {
+                PNCounter counter = (PNCounter) tuple.fst;
+                counter.increment(1);
+                tuple.snd++;
+            }
+        }
+    }
+
     /**
      * Generates the delta for this particular individual state. This is used in sending
      * updates to other nodes in the system
@@ -47,5 +62,17 @@ public class IndividualState {
             }
         }
         return digests;
+    }
+
+    public synchronized String getAllResponse() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("response: (").append(state.size()).append(" elements)\n");
+        for (Map.Entry<String, Tuple<Type, Long>> entry : state.entrySet()) {
+            builder.append(entry.getKey())
+                    .append(" : ")
+                    .append(entry.getValue().fst.value())
+                    .append("\n");
+        }
+        return builder.toString();
     }
 }

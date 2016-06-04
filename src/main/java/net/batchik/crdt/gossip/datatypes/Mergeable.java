@@ -1,4 +1,4 @@
-package net.batchik.crdt.datatypes;
+package net.batchik.crdt.gossip.datatypes;
 
 
 interface Mergeable<S> {

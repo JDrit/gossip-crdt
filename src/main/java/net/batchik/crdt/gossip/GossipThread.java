@@ -1,14 +1,16 @@
-package net.batchik.crdt;
+package net.batchik.crdt.gossip;
 
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
+import java.util.List;
 import java.util.Map;
 
 public class GossipThread extends Thread {
@@ -26,13 +28,16 @@ public class GossipThread extends Thread {
             try {
                 Thread.sleep(5 * SECOND);
                 for (Map.Entry<Integer, Peer> entry : states.getPeers().entrySet()) {
+                    log.info(entry.getValue().getAddress());
                     String hostname = entry.getValue().getAddress().getHostName();
                     int port = entry.getValue().getAddress().getPort();
                     TTransport transport = new TFramedTransport(new TSocket(hostname, port));
                     transport.open();
                     TProtocol protocol = new TBinaryProtocol(transport);
                     GossipService.Client client = new GossipService.Client(protocol);
-                    Map<Integer, Long> initial = client.initial(states.getInitialDigest());
+                    List<Digest> digests = client.gossip(states.getInitialDigest());
+                    log.info("digests: " + digests);
+
                     transport.close();
                 }
             } catch (InterruptedException ex) {

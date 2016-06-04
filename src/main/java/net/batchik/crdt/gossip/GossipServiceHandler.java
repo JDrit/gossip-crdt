@@ -15,8 +15,9 @@ public class GossipServiceHandler implements GossipService.Iface {
     }
 
     @Override
-    public List<Digest> gossip(Map<Integer, Long> request) throws TException {
+    public GossipResponse gossip(GossipRequest request) throws TException {
         log.debug("received gossip message");
-        return state.getDeltaScuttle(request);
+        List<Digest> digests = state.getDeltaScuttle(request.getMax());
+        return new GossipResponse(state.getSelf().getId(), digests);
     }
 }

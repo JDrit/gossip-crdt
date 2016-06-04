@@ -103,10 +103,7 @@ public class Main {
             peers.add(new Peer(id, address));
         }
 
-        log.info("starting up with " + peers.size() + " peers.\n" +
-                 peers + "\n" +
-                 "binding to address: " + selfAddress);
-
+        log.info("starting with " + peers.size() + " other peer(s)");
 
         HttpServer httpServer = WebServer.generateServer(webPort, self);
         httpServer.start();

@@ -1,7 +1,5 @@
 package net.batchik.crdt.gossip.datatypes;
 
-import org.apache.http.impl.nio.reactor.IOReactorConfig;
-
 import java.nio.ByteBuffer;
 
 /**
@@ -11,11 +9,17 @@ public class PNCounter extends Type<Integer, PNCounter> {
 
     private GCounter P;
     private GCounter N;
+    private int id;
 
     public PNCounter(int size, int id) {
         super(id);
+        this.id = id;
         P = new GCounter(size, id);
         N = new GCounter(size, id);
+    }
+
+    private PNCounter(int id, GCounter P, GCounter N) {
+        super(id);
     }
 
     public void increment(int amount) {
@@ -35,10 +39,19 @@ public class PNCounter extends Type<Integer, PNCounter> {
     public ByteBuffer serialize() {
         ByteBuffer b1 = P.serialize();
         ByteBuffer b2 = N.serialize();
-        ByteBuffer finalBuffer = ByteBuffer.allocate(b1.position() + b2.position());
+        ByteBuffer finalBuffer = ByteBuffer.allocate(4 + 4 + b1.position() + b2.position());
+        finalBuffer.putInt(1);
+        finalBuffer.putInt(id);
         finalBuffer.put(b1);
         finalBuffer.put(b2);
         return finalBuffer;
+    }
+
+    public static PNCounter deserialze(ByteBuffer buffer) {
+        int id = buffer.getInt();
+        GCounter newP = GCounter.deserialze(buffer);
+        GCounter newN = GCounter.deserialze(buffer);
+        return new PNCounter(id, newP, newN);
     }
 
     public void merge(PNCounter counter) {

@@ -17,4 +17,15 @@ public abstract class Type<S, T> implements Mergeable<T> {
 
     public abstract ByteBuffer serialize();
 
+    public static Type deser(ByteBuffer buffer) {
+        switch (buffer.getInt()) {
+            case 0:
+                return GCounter.deserialze(buffer);
+            case 1:
+                return PNCounter.deserialze(buffer);
+            default:
+                return null;
+        }
+    }
+
 }

@@ -1,6 +1,5 @@
 package net.batchik.crdt.gossip.datatypes;
 
-
 import java.nio.ByteBuffer;
 
 public class GCounter extends Type<Integer, GCounter> {
@@ -13,6 +12,13 @@ public class GCounter extends Type<Integer, GCounter> {
         this.size = size;
         this.id = id;
         P = new int[size];
+    }
+
+    private GCounter(int id, int size, int[] P) {
+        super(id);
+        this.size = size;
+        this.id = id;
+        this.P = P;
     }
 
     public void increment(int amount) {
@@ -30,12 +36,26 @@ public class GCounter extends Type<Integer, GCounter> {
 
     @Override
     public ByteBuffer serialize() {
-        ByteBuffer buffer = ByteBuffer.allocate(4 + P.length * 4);
+        ByteBuffer buffer = ByteBuffer.allocate(4 + 4 + 4 + P.length * 4);
+        buffer.putInt(0);
+        buffer.putInt(id);
         buffer.putInt(P.length);
         for (int i = 0 ; i < size ; i++) {
             buffer.putInt(P[i]);
         }
         return buffer;
+    }
+
+
+    public static GCounter deserialze(ByteBuffer buffer) {
+        int id = buffer.getInt();
+        int size = buffer.getInt();
+        int[] P = new int[size];
+
+        for (int i = 0 ; i < size ; i++) {
+            P[i] = buffer.getInt();
+        }
+        return new GCounter(id, size, P);
     }
 
     @Override

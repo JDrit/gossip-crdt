@@ -1,16 +1,17 @@
 package net.batchik.crdt.gossip;
 
+import net.batchik.crdt.*;
+import net.batchik.crdt.gossip.datatypes.Type;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TCompactProtocol;
+
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import java.util.List;
 import java.util.Map;
 
 public class GossipThread extends Thread {
@@ -28,17 +29,27 @@ public class GossipThread extends Thread {
             try {
                 Thread.sleep(5 * SECOND);
                 for (Map.Entry<Integer, Peer> entry : states.getPeers().entrySet()) {
-                    log.info(entry.getValue().getAddress());
-                    String hostname = entry.getValue().getAddress().getHostName();
-                    int port = entry.getValue().getAddress().getPort();
-                    TTransport transport = new TFramedTransport(new TSocket(hostname, port));
-                    transport.open();
-                    TProtocol protocol = new TBinaryProtocol(transport);
-                    GossipService.Client client = new GossipService.Client(protocol);
-                    List<Digest> digests = client.gossip(states.getInitialDigest());
-                    log.info("digests: " + digests);
+                    if (entry.getValue().getId() != states.getSelf().getId()) {
+                        String hostname = entry.getValue().getAddress().getHostName();
+                        log.info("connecting to : " + entry.getValue().getId());
+                        int port = entry.getValue().getAddress().getPort();
+                        TTransport transport = new TFramedTransport(new TSocket(hostname, port));
+                        transport.open();
+                        TProtocol protocol = new TBinaryProtocol(transport);
+                        GossipService.Client client = new GossipService.Client(protocol);
+                        GossipResponse response = client.gossip(new GossipRequest(states.getInitialDigest()));
 
-                    transport.close();
+                        for (Digest digest : response.getDigests()) {
+                            log.debug("processing digest: " + digest);
+                            Peer peer = states.getPeers().get(digest.getR());
+                            log.debug("processing digest for peer: " + peer);
+                            Type type = Type.deser(digest.bufferForV());
+                            peer.getState().merge(response.getId(), digest.getK(), type, digest.getN());
+                            states.getSelf().getState().merge(states.getSelf().getId(), digest.getK(), type, digest.getN());
+                        }
+
+                        transport.close();
+                    }
                 }
             } catch (InterruptedException ex) {
                 log.warn("interrupted exception in thread", ex);

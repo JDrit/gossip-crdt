@@ -9,7 +9,6 @@ import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 
 public class GossipServer {
@@ -23,12 +22,12 @@ public class GossipServer {
         GossipServiceHandler handler = new GossipServiceHandler(states);
         GossipService.Processor processor = new GossipService.Processor<GossipService.Iface>(handler);
         TNonblockingServerTransport transport = new TNonblockingServerSocket(self.getAddress());
-        TThreadedSelectorServer.Args serverArgs = new TThreadedSelectorServer.Args(transport);
-        serverArgs.transportFactory(new TFramedTransport.Factory());
-        serverArgs.protocolFactory(new TBinaryProtocol.Factory());
-        serverArgs.processor(processor);
-        serverArgs.selectorThreads(4);
-        serverArgs.workerThreads(32);
+        TThreadedSelectorServer.Args serverArgs = new TThreadedSelectorServer.Args(transport)
+            .transportFactory(new TFramedTransport.Factory())
+            .protocolFactory(new TBinaryProtocol.Factory())
+            .processor(processor)
+            .selectorThreads(4)
+            .workerThreads(32);
         return new TThreadedSelectorServer(serverArgs);
 
     }

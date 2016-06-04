@@ -1,23 +1,28 @@
 package net.batchik.crdt.gossip;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.batchik.crdt.gossip.datatypes.GCounter;
 import net.batchik.crdt.gossip.datatypes.PNCounter;
 import net.batchik.crdt.gossip.datatypes.Type;
+import org.apache.log4j.Logger;
 
 
 public class IndividualState {
+    static Logger log = Logger.getLogger(IndividualState.class.getName());
     private HashMap<String, Tuple<Type, Long>> state;
-    private long maxVersion = 0;
+    private long maxVersion;
 
     public IndividualState() {
         state = new HashMap<>();
+        maxVersion = 0L;
     }
 
-    public long getMaxVersion() {
+    public synchronized long getMaxVersion() {
         return maxVersion;
     }
 
@@ -34,13 +39,31 @@ public class IndividualState {
     public synchronized void incrementCounter(String key, int id) {
         Tuple<Type, Long> tuple = state.get(key);
         if (tuple == null) {
-            state.put(key, new Tuple<>(new PNCounter(2, id), 0L));
-        } else {
-            if (tuple.fst instanceof PNCounter) {
-                PNCounter counter = (PNCounter) tuple.fst;
-                counter.increment(1);
-                tuple.snd++;
+            state.put(key, new Tuple<>(new GCounter(2, id), 1L));
+            if (maxVersion == 0) {
+                maxVersion = 1;
             }
+        } else if (tuple.fst instanceof PNCounter) {
+            PNCounter counter = (PNCounter) tuple.fst;
+            counter.increment(1);
+            tuple.snd++;
+            if (tuple.snd > maxVersion) {
+                maxVersion = tuple.snd;
+            }
+        }
+    }
+
+    public synchronized void merge(int id, String key, Type value, long version) {
+        Tuple<Type, Long> tuple = state.get(key);
+        if (tuple == null) {
+            state.put(key, new Tuple<>(value, version));
+            log.debug("put new tuple into peer: " + id + ", key: " + key);
+        } else if (tuple.snd < version) {
+            log.debug("mering key: " + key);
+            tuple.fst.merge(value);
+        }
+        if (version > maxVersion) {
+            maxVersion = version;
         }
     }
 

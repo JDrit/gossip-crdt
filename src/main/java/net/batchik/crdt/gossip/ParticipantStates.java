@@ -42,7 +42,7 @@ public class ParticipantStates {
         for (Map.Entry<Integer, Peer> entry : peerMap.entrySet()) {
             digest.put(entry.getKey(), entry.getValue().getState().getMaxVersion());
         }
-        log.debug("initial digest created of: " + digest);
+        log.debug("getInitialDigest: " + digest);
         return digest;
     }
 
@@ -52,13 +52,12 @@ public class ParticipantStates {
      */
     public synchronized List<Digest> getDeltaScuttle(Map<Integer, Long> initial) {
         List<Digest> digests = new ArrayList<>();
-        log.debug("generating digests for initial of: " + initial);
         // the max version that p knows about q
         for (Map.Entry<Integer, Peer> entry : peerMap.entrySet()) {
             long qMaxVersion = initial.get(entry.getKey());
             digests.addAll(entry.getValue().getState().getDeltaScuttle(qMaxVersion, entry.getKey()));
         }
-        log.debug("digests generated: " + digests);
+        log.debug("getDeltaScuttle: " + digests);
         return digests;
     }
 }

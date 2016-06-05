@@ -1,7 +1,6 @@
 package net.batchik.crdt.gossip;
 
-import net.batchik.crdt.*;
-import net.batchik.crdt.gossip.datatypes.Type;
+import net.batchik.crdt.gossip.datatypes.GCounterUtil;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -43,9 +42,18 @@ public class GossipThread extends Thread {
                             log.debug("processing digest: " + digest);
                             Peer peer = states.getPeers().get(digest.getR());
                             log.debug("processing digest for peer: " + peer);
-                            Type type = Type.deser(digest.bufferForV());
-                            peer.getState().merge(response.getId(), digest.getK(), type, digest.getN());
-                            states.getSelf().getState().merge(states.getSelf().getId(), digest.getK(), type, digest.getN());
+
+                            Object value = null;
+                            switch (digest.getType()) {
+                                case GCCOUNTER:
+                                    value = digest.getGCounter();
+                                    break;
+                                case PNCOUNTER:
+                                    value = digest.getPNCounter();
+                            }
+
+                            peer.getState().merge(digest.getK(), value, digest.getN());
+                            states.getSelf().getState().merge(digest.getK(), value, digest.getN());
                         }
 
                         transport.close();

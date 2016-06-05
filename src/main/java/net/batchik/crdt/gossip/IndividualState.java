@@ -1,20 +1,17 @@
 package net.batchik.crdt.gossip;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.batchik.crdt.gossip.datatypes.GCounter;
-import net.batchik.crdt.gossip.datatypes.PNCounter;
-import net.batchik.crdt.gossip.datatypes.Type;
+import net.batchik.crdt.gossip.datatypes.GCounterUtil;
 import org.apache.log4j.Logger;
 
 
 public class IndividualState {
     static Logger log = Logger.getLogger(IndividualState.class.getName());
-    private HashMap<String, Tuple<Type, Long>> state;
+    private HashMap<String, Tuple<Object, Long>> state;
     private long maxVersion;
 
     public IndividualState() {
@@ -37,33 +34,33 @@ public class IndividualState {
     }
 
     public synchronized void incrementCounter(String key, int id) {
-        Tuple<Type, Long> tuple = state.get(key);
+        Tuple<Object, Long> tuple = state.get(key);
         if (tuple == null) {
-            state.put(key, new Tuple<>(new GCounter(2, id), 1L));
-            if (maxVersion == 0) {
-                maxVersion = 1;
-            }
-        } else if (tuple.fst instanceof PNCounter) {
-            PNCounter counter = (PNCounter) tuple.fst;
-            counter.increment(1);
-            tuple.snd++;
-            if (tuple.snd > maxVersion) {
-                maxVersion = tuple.snd;
-            }
+            state.put(key, new Tuple<>(GCounterUtil.newGCounter(2, id), ++maxVersion));
+        } else if (tuple.fst instanceof GCounter) {
+            GCounter counter = (GCounter) tuple.fst;
+            GCounterUtil.increment(counter);
+            tuple.snd = ++maxVersion;
         }
     }
 
-    public synchronized void merge(int id, String key, Type value, long version) {
-        Tuple<Type, Long> tuple = state.get(key);
+    public synchronized void merge(String key, Object value, long version) {
+        Tuple<Object, Long> tuple = state.get(key);
         if (tuple == null) {
-            state.put(key, new Tuple<>(value, version));
-            log.debug("put new tuple into peer: " + id + ", key: " + key);
+            if (version > maxVersion) {
+                maxVersion = version;
+                state.put(key, new Tuple<>(value, maxVersion));
+            } else {
+                state.put(key, new Tuple<>(value, ++maxVersion));
+            }
         } else if (tuple.snd < version) {
-            log.debug("mering key: " + key);
-            tuple.fst.merge(value);
-        }
-        if (version > maxVersion) {
-            maxVersion = version;
+            log.debug("merging key: " + key);
+            if (tuple.fst instanceof GCounter) {
+                tuple.fst = GCounterUtil.merge((GCounter) tuple.fst, (GCounter) value);
+            } else if (tuple.fst instanceof PNCounter) {
+                // TODO
+            }
+            tuple.snd = ++maxVersion;
         }
     }
 
@@ -76,12 +73,23 @@ public class IndividualState {
      */
     public synchronized List<Digest> getDeltaScuttle(long qMaxVersion, int selfId) {
         List<Digest> digests = new ArrayList<>();
-        for (Map.Entry<String, Tuple<Type, Long>> entry : state.entrySet()) {
+        for (Map.Entry<String, Tuple<Object, Long>> entry : state.entrySet()) {
             String key = entry.getKey();
-            Type value = entry.getValue().fst;
+            Object value = entry.getValue().fst;
             long version = entry.getValue().snd;
             if (version > qMaxVersion) {
-                digests.add(new Digest(selfId, key, value.serialize(), version));
+                Digest digest = new Digest()
+                        .setR(selfId)
+                        .setK(key)
+                        .setN(version);
+                if (value instanceof GCounter) {
+                    digest.setGCounter((GCounter) value);
+                    digest.setType(Type.GCCOUNTER);
+                } else if (value instanceof PNCounter) {
+                    digest.setPNCounter((PNCounter) value);
+                    digest.setType(Type.PNCOUNTER);
+                }
+                digests.add(digest);
             }
         }
         return digests;
@@ -90,10 +98,10 @@ public class IndividualState {
     public synchronized String getAllResponse() {
         StringBuilder builder = new StringBuilder();
         builder.append("response: (").append(state.size()).append(" elements)\n");
-        for (Map.Entry<String, Tuple<Type, Long>> entry : state.entrySet()) {
+        for (Map.Entry<String, Tuple<Object, Long>> entry : state.entrySet()) {
             builder.append(entry.getKey())
                     .append(" : ")
-                    .append(entry.getValue().fst.value())
+                    .append(GCounterUtil.value((GCounter) entry.getValue().fst))
                     .append("\n");
         }
         return builder.toString();

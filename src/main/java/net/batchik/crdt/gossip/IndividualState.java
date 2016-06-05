@@ -33,13 +33,13 @@ public class IndividualState {
         }
     }
 
-    public synchronized void incrementCounter(String key, int id) {
+    public synchronized void incrementCounter(String key, int id, int clusterSize) {
         Tuple<Object, Long> tuple = state.get(key);
         if (tuple == null) {
-            state.put(key, new Tuple<>(GCounterUtil.newGCounter(2, id), ++maxVersion));
+            state.put(key, new Tuple<>(GCounterUtil.newGCounter(clusterSize, id), ++maxVersion));
         } else if (tuple.fst instanceof GCounter) {
             GCounter counter = (GCounter) tuple.fst;
-            GCounterUtil.increment(counter);
+            GCounterUtil.increment(counter, id);
             tuple.snd = ++maxVersion;
         }
     }

@@ -1,12 +1,10 @@
 namespace java net.batchik.crdt.gossip
 
 struct GCounter {
-    1: i32 id;
     2: list<i32> P;
 }
 
 struct PNCounter {
-    1: i32 id;
     2: list<i32> P;
     3: list<i32> N;
 }

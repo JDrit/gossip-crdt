@@ -1,22 +1,25 @@
 package net.batchik.crdt.gossip.datatypes;
 
 import net.batchik.crdt.gossip.*;
+import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class GCounterUtil {
+    static Logger log = Logger.getLogger(GCounterUtil.class.getName());
 
     public static GCounter newGCounter(int size, int id) {
         List<Integer> P = new ArrayList<>(size);
         for (int i = 0 ; i < size ; i++) {
             P.add(0);
         }
-        return new GCounter(id, P);
+        P.set(id, 1);
+        return new GCounter(P);
     }
 
-    public static void increment(GCounter counter) {
-        int id = counter.getId();
+    public static void increment(GCounter counter, int id) {
+        log.debug("incrementing for " + id);
         List<Integer> P = counter.getP();
         P.set(id, P.get(id) + 1);
     }

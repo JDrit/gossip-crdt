@@ -105,7 +105,7 @@ public class Main {
 
         log.info("starting with " + peers.size() + " other peer(s)");
 
-        HttpServer httpServer = WebServer.generateServer(webPort, self);
+        HttpServer httpServer = WebServer.generateServer(webPort, self, peers.size() + 1);
         httpServer.start();
         log.info("web started");
 

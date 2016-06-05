@@ -1,6 +1,5 @@
 package net.batchik.crdt.web;
 
-import net.batchik.crdt.gossip.ParticipantStates;
 import net.batchik.crdt.gossip.Peer;
 import org.apache.http.ExceptionLogger;
 import org.apache.http.impl.nio.bootstrap.HttpServer;
@@ -12,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 public class WebServer {
 
-    public static HttpServer generateServer(int port, Peer peer) throws IOException, InterruptedException {
+    public static HttpServer generateServer(int port, Peer peer, int clusterSize) throws IOException, InterruptedException {
         IOReactorConfig config = IOReactorConfig.custom()
                 .setIoThreadCount(Runtime.getRuntime().availableProcessors())
                 .setConnectTimeout(30000)
@@ -25,16 +24,11 @@ public class WebServer {
                 .setExceptionLogger(ExceptionLogger.STD_ERR)
                 .setIOReactorConfig(config)
                 .registerHandler("/", new StatusRequestHandler(peer))
-                .registerHandler("/update/*", new UpdateRequestHandler(peer))
+                .registerHandler("/update/*", new UpdateRequestHandler(peer, clusterSize))
                 .setServerInfo("uvb-server")
                 .create();
 
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                httpServer.shutdown(5, TimeUnit.SECONDS);
-            }
-        });
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> httpServer.shutdown(5, TimeUnit.SECONDS)));
 
         return httpServer;
     }

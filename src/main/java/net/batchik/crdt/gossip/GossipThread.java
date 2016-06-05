@@ -30,7 +30,6 @@ public class GossipThread extends Thread {
                 for (Map.Entry<Integer, Peer> entry : states.getPeers().entrySet()) {
                     if (entry.getValue().getId() != states.getSelf().getId()) {
                         String hostname = entry.getValue().getAddress().getHostName();
-                        log.info("connecting to : " + entry.getValue().getId());
                         int port = entry.getValue().getAddress().getPort();
                         TTransport transport = new TFramedTransport(new TSocket(hostname, port));
                         transport.open();

@@ -11,9 +11,11 @@ import java.io.IOException;
 
 public class UpdateRequestHandler implements HttpAsyncRequestHandler<HttpRequest> {
     private Peer peer;
+    private int clusterSize;
 
-    public UpdateRequestHandler(Peer peer) {
+    public UpdateRequestHandler(Peer peer, int clusterSize) {
         this.peer = peer;
+        this.clusterSize = clusterSize;
     }
 
     /**
@@ -59,7 +61,7 @@ public class UpdateRequestHandler implements HttpAsyncRequestHandler<HttpRequest
         HttpResponse response = httpExchange.getResponse();
 
         String name = data.getRequestLine().getUri().substring(8);
-        peer.getState().incrementCounter(name, peer.getId());
+        peer.getState().incrementCounter(name, peer.getId(), clusterSize);
 
         httpExchange.submitResponse(new BasicAsyncResponseProducer(response));
     }

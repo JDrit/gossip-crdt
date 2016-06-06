@@ -6,11 +6,12 @@ import java.util.List;
 import java.util.Map;
 
 import net.batchik.crdt.gossip.datatypes.GCounterUtil;
+import net.batchik.crdt.gossip.datatypes.PNCounterUtil;
 import org.apache.log4j.Logger;
 
 
 public class IndividualState {
-    static Logger log = Logger.getLogger(IndividualState.class.getName());
+    private static Logger log = Logger.getLogger(IndividualState.class.getName());
     private HashMap<String, Tuple<Object, Long>> state;
     private long maxVersion;
 
@@ -58,7 +59,7 @@ public class IndividualState {
             if (tuple.fst instanceof GCounter) {
                 tuple.fst = GCounterUtil.merge((GCounter) tuple.fst, (GCounter) value);
             } else if (tuple.fst instanceof PNCounter) {
-                // TODO
+                tuple.fst = PNCounterUtil.merge((PNCounter) tuple.fst, (PNCounter) value);
             }
             tuple.snd = ++maxVersion;
         }

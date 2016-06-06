@@ -7,11 +7,13 @@ import org.apache.http.impl.nio.bootstrap.ServerBootstrap;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
 public class WebServer {
 
-    public static HttpServer generateServer(int port, Peer peer, int clusterSize) throws IOException, InterruptedException {
+    public static HttpServer generateServer(InetSocketAddress address, Peer peer, int clusterSize)
+            throws IOException, InterruptedException {
         IOReactorConfig config = IOReactorConfig.custom()
                 .setIoThreadCount(Runtime.getRuntime().availableProcessors())
                 .setConnectTimeout(30000)
@@ -20,7 +22,8 @@ public class WebServer {
                 .build();
 
         HttpServer httpServer = ServerBootstrap.bootstrap()
-                .setListenerPort(port)
+                .setLocalAddress(address.getAddress())
+                .setListenerPort(address.getPort())
                 .setExceptionLogger(ExceptionLogger.STD_ERR)
                 .setIOReactorConfig(config)
                 .registerHandler("/", new StatusRequestHandler(peer))

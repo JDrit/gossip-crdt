@@ -1,6 +1,5 @@
 package net.batchik.crdt.gossip;
 
-import net.batchik.crdt.gossip.datatypes.GCounterUtil;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -16,17 +15,18 @@ import java.util.Map;
 public class GossipThread extends Thread {
     static Logger log = Logger.getLogger(GossipThread.class.getName());
     ParticipantStates states;
-    private final long SECOND = 1000;
+    private int sleepTime;
 
-    public GossipThread(ParticipantStates states) {
+    public GossipThread(ParticipantStates states, int sleepTime) {
         this.states = states;
+        this.sleepTime = sleepTime;
     }
 
     @Override
     public void run() {
         while (true) {
             try {
-                Thread.sleep(5 * SECOND);
+                Thread.sleep(sleepTime);
                 for (Map.Entry<Integer, Peer> entry : states.getPeers().entrySet()) {
                     if (entry.getValue().getId() != states.getSelf().getId()) {
                         String hostname = entry.getValue().getAddress().getHostName();
@@ -49,6 +49,7 @@ public class GossipThread extends Thread {
                                     break;
                                 case PNCOUNTER:
                                     value = digest.getPNCounter();
+                                    break;
                             }
 
                             peer.getState().merge(digest.getK(), value, digest.getN());

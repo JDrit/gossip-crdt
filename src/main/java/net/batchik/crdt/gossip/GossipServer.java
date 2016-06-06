@@ -13,10 +13,10 @@ import java.util.List;
 
 public class GossipServer {
 
-    public static TServer generateServer(Peer self, List<Peer> peers) throws TTransportException {
+    public static TServer generateServer(Peer self, List<Peer> peers, int sleepTime) throws TTransportException {
 
         ParticipantStates states =  new ParticipantStates(self, peers);
-        GossipThread thread = new GossipThread(states);
+        GossipThread thread = new GossipThread(states, sleepTime);
         thread.start();
 
         GossipServiceHandler handler = new GossipServiceHandler(states);

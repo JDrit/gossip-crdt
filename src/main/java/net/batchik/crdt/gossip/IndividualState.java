@@ -1,5 +1,6 @@
 package net.batchik.crdt.gossip;
 
+import java.net.InetSocketAddress;
 import java.text.NumberFormat;
 import java.util.*;
 
@@ -12,9 +13,11 @@ public class IndividualState {
     private static Logger log = Logger.getLogger(IndividualState.class.getName());
     private NumberFormat format = NumberFormat.getNumberInstance(Locale.US);
     private HashMap<String, Tuple<Object, Long>> state;
+    private String id;
     private long maxVersion;
 
-    public IndividualState() {
+    public IndividualState(String id) {
+        this.id = id;
         state = new HashMap<>();
         maxVersion = 0L;
     }
@@ -33,10 +36,10 @@ public class IndividualState {
         }
     }
 
-    public synchronized void incrementCounter(String key, int id, int clusterSize) {
+    public synchronized void incrementCounter(String key) {
         Tuple<Object, Long> tuple = state.get(key);
         if (tuple == null) {
-            state.put(key, new Tuple<Object, Long>(GCounterUtil.newGCounter(clusterSize, id), ++maxVersion));
+            state.put(key, new Tuple<Object, Long>(GCounterUtil.newGCounter(id), ++maxVersion));
         } else if (tuple.fst instanceof GCounter) {
             GCounter counter = (GCounter) tuple.fst;
             GCounterUtil.increment(counter, id);
@@ -72,10 +75,10 @@ public class IndividualState {
      * Generates the delta for this particular individual state. This is used in sending
      * updates to other nodes in the system
      * @param qMaxVersion the max version number that p knows that q has received
-     * @param selfId the ID of r
+     * @param selfAddress the ID of r
      * @return the list of digests for this individual state
      */
-    public synchronized List<Digest> getDeltaScuttle(long qMaxVersion, int selfId) {
+    public synchronized List<Digest> getDeltaScuttle(long qMaxVersion, String selfAddress) {
         List<Digest> digests = new ArrayList<>();
         for (Map.Entry<String, Tuple<Object, Long>> entry : state.entrySet()) {
             String key = entry.getKey();
@@ -83,7 +86,7 @@ public class IndividualState {
             long version = entry.getValue().snd;
             if (version > qMaxVersion) {
                 Digest digest = new Digest()
-                        .setR(selfId)
+                        .setR(selfAddress)
                         .setK(key)
                         .setN(version);
                 if (value instanceof GCounter) {

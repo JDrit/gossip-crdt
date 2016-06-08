@@ -3,15 +3,17 @@ package net.batchik.crdt.gossip;
 import java.net.InetSocketAddress;
 
 public class Peer {
-    private int id;
     private InetSocketAddress address;
     private IndividualState state;
+    private String id;
 
-    public Peer(int id, InetSocketAddress address) {
-        this.id = id;
+    public Peer(InetSocketAddress address) {
         this.address = address;
-        this.state = new IndividualState();
+        this.id = address.toString();
+        this.state = new IndividualState(id);
     }
+
+    public String getId() { return id; }
 
     public InetSocketAddress getAddress() {
         return address;
@@ -21,10 +23,6 @@ public class Peer {
         return state;
     }
 
-    public int getId() { return id; }
-
     @Override
-    public String toString() {
-        return "peer: " + id + ", " + address.toString();
-    }
+    public String toString() { return "peer: " + address.toString(); }
 }

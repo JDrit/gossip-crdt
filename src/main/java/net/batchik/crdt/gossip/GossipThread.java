@@ -31,8 +31,8 @@ public class GossipThread extends Thread {
                 log.warn("interrupted exception while sleeping...");
             }
 
-            for (Map.Entry<Integer, Peer> entry : states.getPeers().entrySet()) {
-                if (entry.getValue().getId() != states.getSelf().getId()) {
+            for (Map.Entry<String, Peer> entry : states.getPeers().entrySet()) {
+                if (!entry.getValue().getId().equals(states.getSelf().getId())) {
                     String hostname = entry.getValue().getAddress().getHostName();
                     int port = entry.getValue().getAddress().getPort();
 

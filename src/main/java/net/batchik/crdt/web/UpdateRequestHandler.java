@@ -62,6 +62,6 @@ public class UpdateRequestHandler implements HttpAsyncRequestHandler<HttpRequest
         httpExchange.submitResponse(new BasicAsyncResponseProducer(response));
 
         String name = data.getRequestLine().getUri().substring(8);
-        peer.getState().incrementCounter(name, peer.getId(), clusterSize);
+        peer.getState().incrementCounter(name);
     }
 }

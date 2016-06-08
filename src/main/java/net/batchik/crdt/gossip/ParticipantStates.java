@@ -12,7 +12,7 @@ import java.util.Map;
 public class ParticipantStates {
     static Logger log = Logger.getLogger(ParticipantStates.class.getName());
 
-    private Map<Integer, Peer> peerMap;
+    private Map<String, Peer> peerMap;
     private Peer self;
 
     public ParticipantStates(Peer self, List<Peer> peers) {
@@ -27,7 +27,7 @@ public class ParticipantStates {
 
     public Peer getSelf() { return self; }
 
-    public synchronized Map<Integer, Peer> getPeers() { return peerMap; }
+    public synchronized Map<String, Peer> getPeers() { return peerMap; }
 
     public synchronized int getClusterSize() {
         return peerMap.size();
@@ -37,9 +37,9 @@ public class ParticipantStates {
      * Generates the initial digest of the states that this node knows about
      * @return HashMap representing the digest
      */
-    public synchronized HashMap<Integer, Long> getInitialDigest() {
-        HashMap<Integer, Long> digest = new HashMap<>(peerMap.size());
-        for (Map.Entry<Integer, Peer> entry : peerMap.entrySet()) {
+    public synchronized HashMap<String, Long> getInitialDigest() {
+        HashMap<String, Long> digest = new HashMap<>(peerMap.size());
+        for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
             digest.put(entry.getKey(), entry.getValue().getState().getMaxVersion());
         }
         log.debug("getInitialDigest: " + digest);
@@ -50,10 +50,10 @@ public class ParticipantStates {
      * Generates the list of deltas that should be send to the node with an ID of q.
      * @return the delta of changes
      */
-    public synchronized List<Digest> getDeltaScuttle(Map<Integer, Long> initial) {
+    public synchronized List<Digest> getDeltaScuttle(Map<String, Long> initial) {
         List<Digest> digests = new ArrayList<>();
         // the max version that p knows about q
-        for (Map.Entry<Integer, Peer> entry : peerMap.entrySet()) {
+        for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
             long qMaxVersion = initial.get(entry.getKey());
             digests.addAll(entry.getValue().getState().getDeltaScuttle(qMaxVersion, entry.getKey()));
         }

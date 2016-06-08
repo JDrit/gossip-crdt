@@ -102,15 +102,13 @@ public class Main {
         int selfId = config.getInt("gossip.id");
         InetSocketAddress selfAddress = convertAddress(config.getString("gossip.address"));
         InetSocketAddress webAddress = convertAddress(config.getString("web.address"));
-        Peer self = new Peer(selfId, selfAddress);
+        Peer self = new Peer(selfAddress);
         String[] peerArray = config.getStringArray("gossip.peers");
 
         List<Peer> peers = new ArrayList<>(peerArray.length);
         for (String peer : peerArray) {
-            String[] split = peer.split("-");
-            int id = Integer.parseInt(split[0]);
-            InetSocketAddress address = convertAddress(split[1]);
-            peers.add(new Peer(id, address));
+            InetSocketAddress address = convertAddress(peer);
+            peers.add(new Peer(address));
         }
 
         log.info("starting peer " + selfId + " with " + peers.size() + " other peer(s)");

@@ -1,12 +1,12 @@
 namespace java net.batchik.crdt.gossip
 
 struct GCounter {
-    2: list<i32> P;
+    2: map<string, i32> P;
 }
 
 struct PNCounter {
-    2: list<i32> P;
-    3: list<i32> N;
+    2: map<string, i32> P;
+    3: map<string, i32> N;
 }
 
 enum Type {
@@ -18,7 +18,7 @@ enum Type {
  * Captures a state of a participant for transport
  */
 struct Digest {
-    1: i32 r;     // the id of the participant
+    1: string r;     // the id of the participant
     2: string k;  // key in the map
     3: i64 n;     // the version number of the value
     4: Type type;
@@ -29,11 +29,11 @@ struct Digest {
 
 
 struct GossipRequest {
-    1: map<i32, i64> max;
+    1: map<string, i64> max;
 }
 
 struct GossipResponse {
-    1: i32 id;
+    1: string id;
     2: list<Digest> digests;
 }
 

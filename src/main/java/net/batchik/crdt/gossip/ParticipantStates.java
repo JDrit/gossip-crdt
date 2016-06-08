@@ -1,5 +1,6 @@
 package net.batchik.crdt.gossip;
 
+import net.batchik.crdt.Main;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -20,7 +21,7 @@ public class ParticipantStates {
         peerMap = new HashMap<>(peers.size());
         peerMap.put(self.getId(), self);
         for (Peer peer : peers) {
-            log.debug("add peer: " + peer.getId() + ", " + peer);
+            log.debug("add peer: " + peer);
             peerMap.put(peer.getId(), peer);
         }
     }
@@ -28,6 +29,18 @@ public class ParticipantStates {
     public Peer getSelf() { return self; }
 
     public synchronized Map<String, Peer> getPeers() { return peerMap; }
+
+    public synchronized Peer getPeer(String id) {
+        Peer peer = peerMap.get(id);
+        if (peer == null) {
+            log.info("id: " + id);
+            InetSocketAddress address = Main.convertAddress(id);
+            peer = new Peer(address);
+            peerMap.put(id, peer);
+            log.info("creating new peer: " + peer);
+        }
+        return peer;
+    }
 
     public synchronized int getClusterSize() {
         return peerMap.size();
@@ -37,7 +50,7 @@ public class ParticipantStates {
      * Generates the initial digest of the states that this node knows about
      * @return HashMap representing the digest
      */
-    public synchronized HashMap<String, Long> getInitialDigest() {
+    public synchronized Map<String, Long> getInitialDigest() {
         HashMap<String, Long> digest = new HashMap<>(peerMap.size());
         for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
             digest.put(entry.getKey(), entry.getValue().getState().getMaxVersion());
@@ -52,10 +65,20 @@ public class ParticipantStates {
      */
     public synchronized List<Digest> getDeltaScuttle(Map<String, Long> initial) {
         List<Digest> digests = new ArrayList<>();
+        log.info("initial: " + initial);
+
         // the max version that p knows about q
         for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
-            long qMaxVersion = initial.get(entry.getKey());
-            digests.addAll(entry.getValue().getState().getDeltaScuttle(qMaxVersion, entry.getKey()));
+            String address = entry.getKey();
+            Peer peer = entry.getValue();
+            Long otherMaxVersion = initial.get(address);
+
+            if (otherMaxVersion == null) {
+                log.debug("other node does not know about: " + address);
+                otherMaxVersion = -1L;
+            }
+
+            digests.addAll(peer.getState().getDeltaScuttle(otherMaxVersion, address));
         }
         log.debug("getDeltaScuttle: " + digests);
         return digests;

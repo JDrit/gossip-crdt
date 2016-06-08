@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class WebServer {
 
-    public static HttpServer generateServer(InetSocketAddress address, Peer peer, int clusterSize)
+    public static HttpServer generateServer(InetSocketAddress address, Peer peer)
             throws IOException, InterruptedException {
         IOReactorConfig config = IOReactorConfig.custom()
                 .setIoThreadCount(Runtime.getRuntime().availableProcessors())
@@ -27,7 +27,7 @@ public class WebServer {
                 .setExceptionLogger(ExceptionLogger.STD_ERR)
                 .setIOReactorConfig(config)
                 .registerHandler("/", new StatusRequestHandler(peer))
-                .registerHandler("/update/*", new UpdateRequestHandler(peer, clusterSize))
+                .registerHandler("/update/*", new UpdateRequestHandler(peer))
                 .setServerInfo("uvb-server")
                 .create();
 

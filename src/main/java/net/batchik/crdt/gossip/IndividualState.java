@@ -80,6 +80,7 @@ public class IndividualState {
      */
     public synchronized List<Digest> getDeltaScuttle(long qMaxVersion, String selfAddress) {
         List<Digest> digests = new ArrayList<>();
+
         for (Map.Entry<String, Tuple<Object, Long>> entry : state.entrySet()) {
             String key = entry.getKey();
             Object value = entry.getValue().fst;

@@ -24,5 +24,5 @@ public class Peer {
     }
 
     @Override
-    public String toString() { return "peer: " + address.toString(); }
+    public String toString() { return "Peer(address: " + address.toString() + ")"; }
 }

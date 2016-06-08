@@ -17,6 +17,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 
 public class Main {
@@ -25,7 +26,10 @@ public class Main {
     static final HelpFormatter formatter = new HelpFormatter();
     static final CommandLineParser parser = new DefaultParser();
     static final String VERSION = "0.0.1";
-    static final int sleepTime = 2 * 1000;
+
+    static final String DEFAULT_GOSSIP_ADDRESS = "0.0.0.0:5000";
+    static final String DEFAULT_WEB_ADDRESS = "0.0.0.0:6000";
+    static final int DEFAULT_GOSSIP_TIME = 2000;
 
     static {
         options.addOption(Option.builder()
@@ -33,6 +37,12 @@ public class Main {
                 .hasArg()
                 .desc("configuration file")
                 .longOpt("config")
+                .build());
+        options.addOption(Option.builder()
+                .argName("peer")
+                .hasArg()
+                .desc("the address of another node")
+                .longOpt("peer")
                 .build());
         options.addOption("help", "print information about system and exit");
         options.addOption("version", "print the version information and exit");
@@ -57,63 +67,64 @@ public class Main {
             System.out.println("version: " + VERSION);
             System.exit(0);
         }
-        if (!cmd.hasOption("config")) {
-            System.out.println("no config file specified, please specify one. exiting...");
+
+        String gossipAddress = DEFAULT_GOSSIP_ADDRESS;
+        String webAddress = DEFAULT_WEB_ADDRESS;
+        int sleepTime = DEFAULT_GOSSIP_TIME;
+        List<Peer> peers = new ArrayList<>();
+
+        if (cmd.hasOption("config")) {
+
+            CompositeConfiguration config = new CompositeConfiguration();
+            config.addConfiguration(new SystemConfiguration());
+            config.addConfiguration(new PropertiesConfiguration(cmd.getOptionValue("config")));
+            config.setThrowExceptionOnMissing(false);
+
+            String level = config.getString("log.level");
+            if (level != null) {
+                switch (level.toUpperCase()) {
+                    case "TRACE":
+                        Logger.getRootLogger().setLevel(Level.TRACE);
+                        break;
+                    case "DEBUG":
+                        Logger.getRootLogger().setLevel(Level.DEBUG);
+                        break;
+                    case "INFO":
+                        Logger.getRootLogger().setLevel(Level.INFO);
+                        break;
+                    case "WARN":
+                        Logger.getRootLogger().setLevel(Level.WARN);
+                        break;
+                    case "ERROR":
+                        Logger.getRootLogger().setLevel(Level.ERROR);
+                        break;
+                    case "FATAL":
+                        Logger.getRootLogger().setLevel(Level.FATAL);
+                        break;
+                }
+            }
+
+            gossipAddress = config.getString("gossip.address");
+            sleepTime = config.getInt("gossip.time");
+            webAddress = config.getString("web.address");
+
+            for (String peer : config.getStringArray("gossip.peers")) {
+                InetSocketAddress address = convertAddress(peer);
+                peers.add(new Peer(address));
+            }
+
+        } else if (cmd.hasOption("peer")) {
+            peers.add(new Peer(convertAddress(cmd.getOptionValue("peer"))));
+        } else {
+            System.out.println("no config file specified or peer given, please specify one. exiting...");
             System.exit(1);
         }
 
-        CompositeConfiguration config = new CompositeConfiguration();
-        config.addConfiguration(new SystemConfiguration());
-        config.addConfiguration(new PropertiesConfiguration(cmd.getOptionValue("config")));
 
-        String level = config.getString("log.level");
-        if (level != null) {
-            switch (level.toUpperCase()) {
-                case "TRACE":
-                    Logger.getRootLogger().setLevel(Level.TRACE);
-                    break;
-                case "DEBUG":
-                    Logger.getRootLogger().setLevel(Level.DEBUG);
-                    break;
-                case "INFO":
-                    Logger.getRootLogger().setLevel(Level.INFO);
-                    break;
-                case "WARN":
-                    Logger.getRootLogger().setLevel(Level.WARN);
-                    break;
-                case "ERROR":
-                    Logger.getRootLogger().setLevel(Level.ERROR);
-                    break;
-                case "FATAL":
-                    Logger.getRootLogger().setLevel(Level.FATAL);
-                    break;
-            }
-        }
+        Peer self = new Peer(convertAddress(gossipAddress));
+        log.info("starting peer with " + peers.size() + " other peer(s)");
 
-        log.debug("----------------------------");
-        log.debug("Listing composite properties");
-        log.debug("----------------------------");
-        Iterator<String> keys = config.getKeys();
-        while (keys.hasNext()) {
-            String key = keys.next();
-            log.debug(key + " = " + config.getProperty(key));
-        }
-
-        int selfId = config.getInt("gossip.id");
-        InetSocketAddress selfAddress = convertAddress(config.getString("gossip.address"));
-        InetSocketAddress webAddress = convertAddress(config.getString("web.address"));
-        Peer self = new Peer(selfAddress);
-        String[] peerArray = config.getStringArray("gossip.peers");
-
-        List<Peer> peers = new ArrayList<>(peerArray.length);
-        for (String peer : peerArray) {
-            InetSocketAddress address = convertAddress(peer);
-            peers.add(new Peer(address));
-        }
-
-        log.info("starting peer " + selfId + " with " + peers.size() + " other peer(s)");
-
-        HttpServer httpServer = WebServer.generateServer(webAddress, self, peers.size() + 1);
+        HttpServer httpServer = WebServer.generateServer(convertAddress(webAddress), self);
         httpServer.start();
         log.info("web started");
 

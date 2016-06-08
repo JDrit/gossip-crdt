@@ -27,13 +27,18 @@ public class GossipThread extends Thread {
         while (true) {
             try {
                 Thread.sleep(sleepTime);
-                for (Map.Entry<Integer, Peer> entry : states.getPeers().entrySet()) {
-                    if (entry.getValue().getId() != states.getSelf().getId()) {
-                        String hostname = entry.getValue().getAddress().getHostName();
-                        int port = entry.getValue().getAddress().getPort();
-                        TTransport transport = new TFramedTransport(new TSocket(hostname, port));
-                        transport.open();
-                        TProtocol protocol = new TBinaryProtocol(transport);
+            } catch (InterruptedException ex) {
+                log.warn("interrupted exception while sleeping...");
+            }
+
+            for (Map.Entry<Integer, Peer> entry : states.getPeers().entrySet()) {
+                if (entry.getValue().getId() != states.getSelf().getId()) {
+                    String hostname = entry.getValue().getAddress().getHostName();
+                    int port = entry.getValue().getAddress().getPort();
+
+                    try (TTransport tran = new TFramedTransport(new TSocket(hostname, port))) {
+                        tran.open();
+                        TProtocol protocol = new TBinaryProtocol(tran);
                         GossipService.Client client = new GossipService.Client(protocol);
                         GossipResponse response = client.gossip(new GossipRequest(states.getInitialDigest()));
 
@@ -55,16 +60,12 @@ public class GossipThread extends Thread {
                             peer.getState().merge(digest.getK(), value, digest.getN());
                             states.getSelf().getState().merge(digest.getK(), value, digest.getN());
                         }
-
-                        transport.close();
+                    } catch (TTransportException ex) {
+                        log.warn("thrift transportation exception while opening socket to: " + entry.getValue().getAddress());
+                    } catch (TException ex) {
+                        log.warn("thrift regular exception while gossiping with: " + entry.getValue().getAddress());
                     }
                 }
-            } catch (InterruptedException ex) {
-                log.warn("interrupted exception in thread", ex);
-            } catch (TTransportException ex) {
-                log.error("thrift transport exception", ex);
-            } catch (TException ex) {
-                log.error("thrift general exception while sending intial", ex);
             }
         }
     }

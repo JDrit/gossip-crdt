@@ -98,7 +98,7 @@ public class Main {
             String key = keys.next();
             log.debug(key + " = " + config.getProperty(key));
         }
-        
+
         int selfId = config.getInt("gossip.id");
         InetSocketAddress selfAddress = convertAddress(config.getString("gossip.address"));
         InetSocketAddress webAddress = convertAddress(config.getString("web.address"));

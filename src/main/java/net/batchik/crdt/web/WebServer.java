@@ -21,7 +21,7 @@ public class WebServer {
                 .setTcpNoDelay(true)
                 .build();
 
-        HttpServer httpServer = ServerBootstrap.bootstrap()
+        final HttpServer httpServer = ServerBootstrap.bootstrap()
                 .setLocalAddress(address.getAddress())
                 .setListenerPort(address.getPort())
                 .setExceptionLogger(ExceptionLogger.STD_ERR)
@@ -31,7 +31,11 @@ public class WebServer {
                 .setServerInfo("uvb-server")
                 .create();
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> httpServer.shutdown(5, TimeUnit.SECONDS)));
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                httpServer.shutdown(5, TimeUnit.SECONDS);
+            }
+        });
 
         return httpServer;
     }

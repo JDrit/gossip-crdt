@@ -10,9 +10,6 @@ import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -45,10 +42,10 @@ public class GossipThread extends Thread {
 
                 // do not try and talk to yourself
                 if (!peer.getId().equals(states.getSelf().getId())) {
+                    log.info("talking to " + peer);
                     String[] split = address.split("/")[1].split(":");
                     String hostname = split[0];
                     int port = Integer.parseInt(split[1]);
-                    log.info("connecting to " + hostname + ":" + port);
 
                     try (TTransport tran = new TFramedTransport(new TSocket(hostname, port))) {
                         tran.open();

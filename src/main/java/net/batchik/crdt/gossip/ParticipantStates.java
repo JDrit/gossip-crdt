@@ -30,18 +30,10 @@ public class ParticipantStates {
 
     public synchronized Map<String, Peer> getPeers() { return peerMap; }
 
-    public synchronized Peer getPeer(String id) {
-        Peer peer = peerMap.get(id);
-        if (peer == null) {
-            log.info("id: " + id);
-            InetSocketAddress address = Main.convertAddress(id);
-            peer = new Peer(address);
-            peerMap.put(id, peer);
-            log.info("creating new peer: " + peer);
-        }
-        return peer;
-    }
+    public synchronized void addPeer(String address) {
 
+    }
+    
     public synchronized int getClusterSize() {
         return peerMap.size();
     }

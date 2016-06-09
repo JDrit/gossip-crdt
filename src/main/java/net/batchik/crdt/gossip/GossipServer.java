@@ -13,15 +13,15 @@ import java.util.List;
 
 public class GossipServer {
 
-    public static TServer generateServer(Peer self, List<Peer> peers, int sleepTime) throws TTransportException {
+    public static TServer generateServer(ParticipantStates states, int sleepTime) throws TTransportException {
 
-        ParticipantStates states =  new ParticipantStates(self, peers);
+
         GossipThread thread = new GossipThread(states, sleepTime);
         thread.start();
 
         GossipServiceHandler handler = new GossipServiceHandler(states);
         GossipService.Processor processor = new GossipService.Processor<GossipService.Iface>(handler);
-        TNonblockingServerTransport transport = new TNonblockingServerSocket(self.getAddress());
+        TNonblockingServerTransport transport = new TNonblockingServerSocket(states.getSelf().getAddress());
         TThreadedSelectorServer.Args serverArgs = new TThreadedSelectorServer.Args(transport)
             .transportFactory(new TFramedTransport.Factory())
             .protocolFactory(new TBinaryProtocol.Factory())

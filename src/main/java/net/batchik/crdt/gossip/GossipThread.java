@@ -11,7 +11,6 @@ import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 import java.util.Map;
-import java.util.Set;
 
 public class GossipThread extends Thread {
     static Logger log = Logger.getLogger(GossipThread.class.getName());
@@ -32,20 +31,15 @@ public class GossipThread extends Thread {
                 log.warn("interrupted exception while sleeping...");
             }
 
-            // loop through and talk to all other peers
-            Set<Map.Entry<String, Peer>> peerEntries = states.getPeers().entrySet();
-            Map.Entry<String, Peer>[] peerArray = peerEntries.toArray(new Map.Entry[peerEntries.size()]);
-
-            for (Map.Entry<String, Peer> entry : peerArray) {
+            for (Map.Entry<String, Peer> entry : states.getPeers().entrySet()) {
                 String address = entry.getKey();
                 Peer peer = entry.getValue();
 
                 // do not try and talk to yourself
-                if (!peer.getId().equals(states.getSelf().getId())) {
-                    log.info("talking to " + peer);
-                    String[] split = address.split("/")[1].split(":");
-                    String hostname = split[0];
-                    int port = Integer.parseInt(split[1]);
+                if (!peer.equals(states.getSelf())) {
+                    log.debug("gossiping to " + peer);
+                    String hostname = peer.getAddress().getAddress().getHostAddress();
+                    int port = peer.getAddress().getPort();
 
                     try (TTransport tran = new TFramedTransport(new TSocket(hostname, port))) {
                         tran.open();
@@ -54,7 +48,8 @@ public class GossipThread extends Thread {
                         GossipResponse response = client.gossip(new GossipRequest(states.getInitialDigest()));
 
                         for (Digest digest : response.getDigests()) {
-                            Peer otherPeer = states.getPeer(digest.getR());
+                            Peer otherPeer = states.getPeers().get(digest.getR());
+                            log.info("received digest about peer: " + digest.getR());
 
                             Object value = null;
                             switch (digest.getType()) {

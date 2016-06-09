@@ -33,8 +33,7 @@ struct GossipRequest {
 }
 
 struct GossipResponse {
-    1: string id;
-    2: list<Digest> digests;
+    1: list<Digest> digests;
 }
 
 service GossipService {

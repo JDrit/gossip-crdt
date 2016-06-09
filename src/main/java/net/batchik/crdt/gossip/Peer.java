@@ -9,11 +9,13 @@ public class Peer {
 
     public Peer(InetSocketAddress address) {
         this.address = address;
-        this.id = address.toString();
+        this.id = address.getAddress().getHostAddress() + ":" + address.getPort();
         this.state = new IndividualState(id);
     }
 
-    public String getId() { return id; }
+    public String getId() {
+        return id;
+    }
 
     public InetSocketAddress getAddress() {
         return address;
@@ -25,4 +27,14 @@ public class Peer {
 
     @Override
     public String toString() { return "Peer(address: " + address.toString() + ")"; }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof Peer && ((Peer) other).getAddress().equals(address);
+    }
+
+    @Override
+    public int hashCode() {
+        return address.hashCode();
+    }
 }

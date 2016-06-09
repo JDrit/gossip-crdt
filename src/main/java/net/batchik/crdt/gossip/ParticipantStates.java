@@ -1,27 +1,28 @@
 package net.batchik.crdt.gossip;
 
 import net.batchik.crdt.Main;
+import net.batchik.crdt.zookeeper.ZKServiceListener;
 import org.apache.log4j.Logger;
 
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ParticipantStates {
-    static Logger log = Logger.getLogger(ParticipantStates.class.getName());
-
-    private Map<String, Peer> peerMap;
-    private Peer self;
+/**
+ * This is the internal mapping of the cluster, which is used to keep both the state for this node
+ * and for all other nodes
+ */
+public class ParticipantStates implements ZKServiceListener {
+    private final static Logger log = Logger.getLogger(ParticipantStates.class.getName());
+    private final Map<String, Peer> peerMap;
+    private final Peer self;
 
     public ParticipantStates(Peer self, List<Peer> peers) {
         this.self = self;
         peerMap = new HashMap<>(peers.size());
         peerMap.put(self.getId(), self);
         for (Peer peer : peers) {
-            log.debug("add peer: " + peer);
             peerMap.put(peer.getId(), peer);
         }
     }
@@ -30,12 +31,20 @@ public class ParticipantStates {
 
     public synchronized Map<String, Peer> getPeers() { return peerMap; }
 
-    public synchronized void addPeer(String address) {
+    /**
+     * Called when a new peer is added to the cluster.
+     * WARNING: the address given could be already in the cluster so the implementer needs
+     * to check for this
+     * @param address the address of the new location
+     */
+    public synchronized void newPeer(String address) {
+        if (!peerMap.containsKey(address)) {
+            log.info("Adding peer at address: " + address);
+            peerMap.put(address, new Peer(Main.convertAddress(address)));
+        } else {
+            log.debug("Address " + address + " is already in the cluster");
+        }
 
-    }
-    
-    public synchronized int getClusterSize() {
-        return peerMap.size();
     }
 
     /**
@@ -47,7 +56,6 @@ public class ParticipantStates {
         for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
             digest.put(entry.getKey(), entry.getValue().getState().getMaxVersion());
         }
-        log.debug("getInitialDigest: " + digest);
         return digest;
     }
 
@@ -57,22 +65,12 @@ public class ParticipantStates {
      */
     public synchronized List<Digest> getDeltaScuttle(Map<String, Long> initial) {
         List<Digest> digests = new ArrayList<>();
-        log.info("initial: " + initial);
-
-        // the max version that p knows about q
         for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
-            String address = entry.getKey();
-            Peer peer = entry.getValue();
-            Long otherMaxVersion = initial.get(address);
-
-            if (otherMaxVersion == null) {
-                log.debug("other node does not know about: " + address);
-                otherMaxVersion = -1L;
+            Long qMaxVersion = initial.get(entry.getKey());
+            if (qMaxVersion != null) {
+                digests.addAll(entry.getValue().getState().getDeltaScuttle(qMaxVersion, entry.getKey()));
             }
-
-            digests.addAll(peer.getState().getDeltaScuttle(otherMaxVersion, address));
         }
-        log.debug("getDeltaScuttle: " + digests);
         return digests;
     }
 }

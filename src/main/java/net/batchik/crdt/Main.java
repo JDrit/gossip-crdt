@@ -1,46 +1,37 @@
 package net.batchik.crdt;
 
 import net.batchik.crdt.gossip.GossipServer;
-import net.batchik.crdt.gossip.GossipServiceListener;
 import net.batchik.crdt.gossip.ParticipantStates;
 import net.batchik.crdt.gossip.Peer;
 import net.batchik.crdt.web.WebServer;
+import net.batchik.crdt.zookeeper.ZKServiceDiscovery;
 import org.apache.commons.cli.*;
 import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.SystemConfiguration;
-import org.apache.curator.RetryPolicy;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.state.ConnectionState;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.x.discovery.*;
-import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
-import org.apache.curator.x.discovery.details.ServiceCacheListener;
 import org.apache.http.impl.nio.bootstrap.HttpServer;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.log4j.net.SyslogAppender;
 import org.apache.thrift.server.TServer;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 
 public class Main {
-    static final Logger log = Logger.getLogger(Main.class.getName());
-    static final Options options = new Options();
-    static final HelpFormatter formatter = new HelpFormatter();
-    static final CommandLineParser parser = new DefaultParser();
-    static final String VERSION = "0.0.1";
+    private static final Logger log = Logger.getLogger(Main.class.getName());
 
-    static final String DEFAULT_GOSSIP_ADDRESS = "0.0.0.0:5000";
-    static final String DEFAULT_WEB_ADDRESS = "0.0.0.0:6000";
-    static final int DEFAULT_GOSSIP_TIME = 2000;
+    private static final Options options = new Options();
+    private static final HelpFormatter formatter = new HelpFormatter();
+    private static final CommandLineParser parser = new DefaultParser();
+    private static final String VERSION = "0.0.1";
+
+    private static final int DEFAULT_GOSSIP_PORT = 5000;
+    private static final String DEFAULT_GOSSIP_ADDRESS = "0.0.0.0";
+    private static final String DEFAULT_WEB_ADDRESS = "0.0.0.0:6000";
+    private static final int DEFAULT_GOSSIP_TIME = 5000;
 
     static {
         options.addOption(Option.builder()
@@ -85,7 +76,7 @@ public class Main {
             System.exit(0);
         }
 
-        String gossipAddress = DEFAULT_GOSSIP_ADDRESS;
+        String gossipAddress = DEFAULT_GOSSIP_ADDRESS + ":" + DEFAULT_GOSSIP_PORT;
         String webAddress = DEFAULT_WEB_ADDRESS;
         int sleepTime = DEFAULT_GOSSIP_TIME;
         List<Peer> peers = new ArrayList<>();
@@ -141,74 +132,42 @@ public class Main {
 
         } else if (cmd.hasOption("zk")) {
             gossipAddress = InetAddress.getLocalHost().getHostAddress();
-            self = new Peer(new InetSocketAddress(gossipAddress, 5000));
-
+            self = new Peer(new InetSocketAddress(gossipAddress, DEFAULT_GOSSIP_PORT));
             String zk = cmd.getOptionValue("zk");
-            String basePath = "/services";
             final String serviceName = "uvb-server";
-            RetryPolicy retry = new ExponentialBackoffRetry(1000, 3);
-            CuratorFramework client =  CuratorFrameworkFactory.newClient(zk, retry);
-            client.start();
+            ZKServiceDiscovery service = new ZKServiceDiscovery(zk, serviceName);
 
-            final ServiceDiscovery<String> serviceDiscovery =
-                    ServiceDiscoveryBuilder.builder(String.class)
-                    .client(client)
-                    .serializer(new JsonInstanceSerializer<>(String.class))
-                    .basePath(basePath)
-                    .build();
-            serviceDiscovery.start();
-
-            final ServiceInstance<String> thisInstance = ServiceInstance.<String>builder()
-                    .name(serviceName)
-                    .port(5000)
-                    .address(gossipAddress)
-                    .payload("test payload")
-                    .uriSpec(new UriSpec("{scheme}://{address}:{port}"))
-                    .build();
-
-            // register this instance of the service
-            serviceDiscovery.registerService(thisInstance);
-            log.info("instance registered");
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                public void run() {
-                    try {
-                        serviceDiscovery.unregisterService(thisInstance);
-                    } catch (Exception e) { }
-                }
-            });
-
-            for (ServiceInstance<String> instance : serviceDiscovery.queryForInstances(serviceName)) {
-                String host = instance.getAddress();
-                int port = instance.getPort();
-                InetSocketAddress address = new InetSocketAddress(host, port);
-                log.info("adding peer at address: " + address);
+            for (ServiceInstance<String> instance : service.getInstances()) {
+                String instanceAddress = instance.getAddress();
+                int instancePort = instance.getPort();
+                InetSocketAddress address = new InetSocketAddress(instanceAddress, instancePort);
+                log.info("adding peer at address: " + instanceAddress + ":" + instancePort);
                 peers.add(new Peer(address));
             }
             states =  new ParticipantStates(self, peers);
 
-            // sets up a listener to the cache of instances to update the peers
-            ServiceCache<String> cache = serviceDiscovery.serviceCacheBuilder()
-                    .name(serviceName)
-                    .build();
-            cache.start();
-            ServiceCacheListener listener = new GossipServiceListener<>(states, serviceDiscovery, serviceName);
-            cache.addListener(listener, Executors.newSingleThreadExecutor());
+            service.register(gossipAddress, DEFAULT_GOSSIP_PORT);
+            service.addListener(states);
+            log.info("instance registered");
 
         } else {
             System.out.println("no config file specified or peer given, please specify one. exiting...");
             System.exit(1);
         }
 
+        log.info("self peer: " + self);
         log.info("starting peer with " + peers.size() + " other peer(s)");
+        log.info("gossipping on: " + states.getSelf().getAddress());
+        log.info("web requests on: " + webAddress);
 
         HttpServer httpServer = WebServer.generateServer(convertAddress(webAddress), self);
-        //httpServer.start();
+        httpServer.start();
         log.info("web started");
 
 
-        //TServer tServer = GossipServer.generateServer(states, sleepTime);
+        TServer tServer = GossipServer.generateServer(states, sleepTime);
         log.info("thrift backend starting...");
-        //tServer.serve();
+        tServer.serve();
         Thread.sleep(Long.MAX_VALUE);
     }
 

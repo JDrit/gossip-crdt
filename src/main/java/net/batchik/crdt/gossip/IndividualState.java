@@ -103,8 +103,11 @@ public class IndividualState {
         return digests;
     }
 
+    /**
+     * Gets the string message representing the local peers known state
+     * @return string message
+     */
     public synchronized String getAllResponse() {
-
         StringBuilder builder = new StringBuilder();
         builder.append("response: (").append(state.size()).append(" elements)\n");
         for (Map.Entry<String, Tuple<Object, Long>> entry : state.entrySet()) {

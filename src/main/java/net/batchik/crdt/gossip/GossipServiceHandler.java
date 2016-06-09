@@ -18,6 +18,6 @@ public class GossipServiceHandler implements GossipService.Iface {
     public GossipResponse gossip(GossipRequest request) throws TException {
         log.debug("received gossip message");
         List<Digest> digests = state.getDeltaScuttle(request.getMax());
-        return new GossipResponse(state.getSelf().getId(), digests);
+        return new GossipResponse(digests);
     }
 }

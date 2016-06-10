@@ -17,7 +17,12 @@ public class GCounterUtil {
     public static void increment(GCounter counter, String id) {
         log.debug("incrementing for " + id);
         Map<String, Integer> P = counter.getP();
-        P.put(id, P.get(id) + 1);
+        Integer currentValue = P.get(id);
+        if (currentValue == null) {
+            P.put(id, 1);
+        } else {
+            P.put(id, currentValue + 1);
+        }
     }
 
     public static int value(GCounter counter) {
@@ -30,14 +35,28 @@ public class GCounterUtil {
 
     public static GCounter merge(GCounter c1, GCounter c2) {
         Map<String, Integer> p1 = c1.getP();
+
+        p1.putAll(c2.getP());
+
         for (Map.Entry<String, Integer> entry : c2.getP().entrySet()) {
             String key = entry.getKey();
-            Integer value = entry.getValue();
+            int value = entry.getValue();
+
+            int currentValue = p1.get(key);
+            if (value > currentValue) {
+                p1.put(key, value);
+            }
+        }
+        /*
+        for (Map.Entry<String, Integer> entry : c2.getP().entrySet()) {
+            String key = entry.getKey();
+            int value = entry.getValue();
             Integer i = p1.get(key);
             if (i == null || i < value) {
                 p1.put(key, value);
             }
         }
+        */
         return c1;
     }
 

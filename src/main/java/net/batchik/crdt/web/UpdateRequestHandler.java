@@ -58,8 +58,12 @@ public class UpdateRequestHandler implements HttpAsyncRequestHandler<HttpRequest
     public void handle(HttpRequest data, HttpAsyncExchange httpExchange, HttpContext context) throws HttpException, IOException {
         HttpResponse response = httpExchange.getResponse();
         httpExchange.submitResponse(new BasicAsyncResponseProducer(response));
-
-        String name = data.getRequestLine().getUri().substring(8);
-        peer.getState().incrementCounter(name);
+        try {
+            String name = data.getRequestLine().getUri().substring(8);
+            peer.getState().incrementCounter(name);
+        } catch (Exception ex) {
+            System.out.println("exception while updating: " + ex);
+            ex.printStackTrace();
+        }
     }
 }

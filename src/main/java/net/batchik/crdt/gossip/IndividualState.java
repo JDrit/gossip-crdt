@@ -1,6 +1,5 @@
 package net.batchik.crdt.gossip;
 
-import java.net.InetSocketAddress;
 import java.text.NumberFormat;
 import java.util.*;
 
@@ -110,12 +109,23 @@ public class IndividualState {
     public synchronized String getAllResponse() {
         StringBuilder builder = new StringBuilder();
         builder.append("response: (").append(state.size()).append(" elements)\n");
-        for (Map.Entry<String, Tuple<Object, Long>> entry : state.entrySet()) {
+        Set<Map.Entry<String, Tuple<Object, Long>>>  entries = state.entrySet();
+
+        Map.Entry<String, Tuple<Object, Long>>[] arr = entries.toArray(new Map.Entry[entries.size()]);
+        Arrays.sort(arr, new Comparator<Map.Entry<String, Tuple<Object, Long>>>() {
+            @Override
+            public int compare(Map.Entry<String, Tuple<Object, Long>> e0, Map.Entry<String, Tuple<Object, Long>> e1) {
+                return e0.getKey().compareTo(e1.getKey());
+            }
+        });
+
+        for (Map.Entry<String, Tuple<Object, Long>> entry : arr) {
             builder.append(entry.getKey())
                     .append(" : ")
                     .append(format.format(GCounterUtil.value((GCounter) entry.getValue().fst)))
                     .append("\n");
         }
+
         return builder.toString();
     }
 }

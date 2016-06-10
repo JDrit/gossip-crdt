@@ -19,7 +19,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
 
-
 public class Main {
     private static final Logger log = Logger.getLogger(Main.class.getName());
 
@@ -131,8 +130,16 @@ public class Main {
             states =  new ParticipantStates(self, peers);
 
         } else if (cmd.hasOption("zk")) {
+
+            int max = 5000;
+            int min = 3000;
+            int port = new Random().nextInt(max - min + 1) + min;
+            webAddress = "0.0.0.0:" + (port + 1000);
+
+            //int port = DEFAULT_GOSSIP_PORT;
+
             gossipAddress = InetAddress.getLocalHost().getHostAddress();
-            self = new Peer(new InetSocketAddress(gossipAddress, DEFAULT_GOSSIP_PORT));
+            self = new Peer(new InetSocketAddress(gossipAddress, port));
             String zk = cmd.getOptionValue("zk");
             final String serviceName = "uvb-server";
             ZKServiceDiscovery service = new ZKServiceDiscovery(zk, serviceName);
@@ -146,7 +153,7 @@ public class Main {
             }
             states =  new ParticipantStates(self, peers);
 
-            service.register(gossipAddress, DEFAULT_GOSSIP_PORT);
+            service.register(gossipAddress, port);
             service.addListener(states);
             log.info("instance registered");
 
@@ -170,5 +177,4 @@ public class Main {
         tServer.serve();
         Thread.sleep(Long.MAX_VALUE);
     }
-
 }

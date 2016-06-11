@@ -1,19 +1,20 @@
 package net.batchik.crdt;
 
+import net.batchik.crdt.fiber.FiberServer;
+import net.batchik.crdt.fiber.HttpRouter;
+import net.batchik.crdt.fiber.StatusRequestHandler;
+import net.batchik.crdt.fiber.UpdateRequestHandler;
 import net.batchik.crdt.gossip.GossipServer;
 import net.batchik.crdt.gossip.ParticipantStates;
 import net.batchik.crdt.gossip.Peer;
-import net.batchik.crdt.web.WebServer;
 import net.batchik.crdt.zookeeper.ZKServiceDiscovery;
 import org.apache.commons.cli.*;
 import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.SystemConfiguration;
 import org.apache.curator.x.discovery.*;
-import org.apache.http.impl.nio.bootstrap.HttpServer;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.thrift.server.TServer;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -142,9 +143,10 @@ public class Main {
             self = new Peer(new InetSocketAddress(gossipAddress, port));
             String zk = cmd.getOptionValue("zk");
             final String serviceName = "uvb-server";
-            ZKServiceDiscovery service = new ZKServiceDiscovery(zk, serviceName);
+            ZKServiceDiscovery zkService = new ZKServiceDiscovery(zk, serviceName);
+            zkService.start();
 
-            for (ServiceInstance<String> instance : service.getInstances()) {
+            for (ServiceInstance<String> instance : zkService.getInstances()) {
                 String instanceAddress = instance.getAddress();
                 int instancePort = instance.getPort();
                 InetSocketAddress address = new InetSocketAddress(instanceAddress, instancePort);
@@ -153,8 +155,8 @@ public class Main {
             }
             states =  new ParticipantStates(self, peers);
 
-            service.register(gossipAddress, port);
-            service.addListener(states);
+            zkService.register(gossipAddress, port);
+            zkService.addListener(states);
             log.info("instance registered");
 
         } else {
@@ -167,14 +169,22 @@ public class Main {
         log.info("gossipping on: " + states.getSelf().getAddress());
         log.info("web requests on: " + webAddress);
 
-        HttpServer httpServer = WebServer.generateServer(convertAddress(webAddress), self);
+        //Service httpServer = new WebServer(convertAddress(webAddress), self);
+        log.info("web starting...");
+        //httpServer.start();
+
+        HttpRouter router = HttpRouter.builder()
+                .registerEndpoint("/", new StatusRequestHandler(self))
+                .registerEndpoint("/update/.*", new UpdateRequestHandler(self))
+                .build();
+
+        Service httpServer = new FiberServer("0.0.0.0", 6000, router);
         httpServer.start();
-        log.info("web started");
 
-
-        TServer tServer = GossipServer.generateServer(states, sleepTime);
+        Service gossipServer = new GossipServer(states, sleepTime);
         log.info("thrift backend starting...");
-        tServer.serve();
+        gossipServer.start();
+
         Thread.sleep(Long.MAX_VALUE);
     }
 }

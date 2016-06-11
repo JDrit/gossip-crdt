@@ -1,5 +1,6 @@
 package net.batchik.crdt.gossip;
 
+import net.batchik.crdt.Service;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.server.TServer;
@@ -11,9 +12,10 @@ import org.apache.thrift.transport.TTransportException;
 
 import java.util.List;
 
-public class GossipServer {
+public class GossipServer extends Service {
+    private final TServer tServer;
 
-    public static TServer generateServer(ParticipantStates states, int sleepTime) throws TTransportException {
+    public GossipServer(ParticipantStates states, int sleepTime) throws TTransportException {
 
 
         GossipThread thread = new GossipThread(states, sleepTime);
@@ -28,7 +30,14 @@ public class GossipServer {
             .processor(processor)
             .selectorThreads(4)
             .workerThreads(32);
-        return new TThreadedSelectorServer(serverArgs);
+        tServer = new TThreadedSelectorServer(serverArgs);
+    }
 
+    public void start() {
+        tServer.serve();
+    }
+
+    public void close() {
+        tServer.stop();
     }
 }

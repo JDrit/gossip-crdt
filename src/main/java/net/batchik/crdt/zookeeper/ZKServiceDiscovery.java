@@ -1,5 +1,6 @@
 package net.batchik.crdt.zookeeper;
 
+import net.batchik.crdt.Service;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -19,7 +20,7 @@ import java.util.concurrent.Executors;
  * Manages all the zookeeper logic required to do service discovery. This uses Apache
  * Curator behind the scenes. Used for service discovery / service registration / cache listeners
  */
-public class ZKServiceDiscovery implements Closeable {
+public class ZKServiceDiscovery extends Service {
     private static final Logger log = Logger.getLogger(ZKServiceDiscovery.class.getName());
     private static final String basePath = "/services";
 
@@ -32,19 +33,25 @@ public class ZKServiceDiscovery implements Closeable {
         this.serviceName = sn;
         RetryPolicy retry = new ExponentialBackoffRetry(1000, 3);
         client =  CuratorFrameworkFactory.newClient(address, retry);
-        client.start();
+
 
          serviceDiscovery = ServiceDiscoveryBuilder.builder(String.class)
                  .client(client)
                  .serializer(new JsonInstanceSerializer<>(String.class))
                  .basePath(basePath)
                  .build();
-        serviceDiscovery.start();
+
 
         // sets up a listener to the cache of instances to update the peers
         cache = serviceDiscovery.serviceCacheBuilder()
                 .name(serviceName)
                 .build();
+
+    }
+
+    public void start() throws Exception {
+        client.start();
+        serviceDiscovery.start();
         cache.start();
     }
 

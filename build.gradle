@@ -44,6 +44,12 @@ dependencies {
     compile group: 'org.apache.curator', name: 'curator-x-discovery', version: '2.10.0'
     compile 'co.paralleluniverse:quasar-core:0.7.5:jdk8'
     quasar  "co.paralleluniverse:quasar-core:0.7.5:jdk8@jar"
+
+
+    //compile group: 'co.paralleluniverse', name: 'comsat-actors-api', version: '0.7.0'
+    //compile group: 'co.paralleluniverse', name: 'comsat-actors-servlet', version: '0.7.0'
+    //compile group: 'co.paralleluniverse', name: 'comsat-jax-rs-client', version: '0.7.0'
+
 }
 
 compileThrift {
@@ -57,12 +63,13 @@ classes {
     doFirst {
         println "Excuting scanSuspendables..."
         ant.taskdef(
-                name: 'scanSuspendables', classname: 'co.paralleluniverse.fibers.instrument.SuspendablesScanner',
+                name: 'scanSuspendables',
+                classname: 'co.paralleluniverse.fibers.instrument.SuspendablesScanner',
                 classpath: "build/classes/main:build/resources/main:${configurations.quasar.asPath}:${configurations.runtime.asPath}")
         ant.scanSuspendables(
                 auto: true,
-                suspendablesFile: "$sourceSets.main.output.resourcesDir/META-INF/suspendables",
-                supersFile: "$sourceSets.main.output.resourcesDir/META-INF/suspendable-supers",
+                suspendablesFile: "src/main/resources/META-INF/suspendables",
+                supersFile: "src/main/resources/META-INF/suspendable-supers",
                 append: true) {
             fileset(dir: sourceSets.main.output.classesDir)
         }

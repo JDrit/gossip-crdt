@@ -1,19 +1,26 @@
 package net.batchik.crdt.web;
 
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import net.batchik.crdt.gossip.IndividualState;
 import net.batchik.crdt.gossip.Peer;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.nio.protocol.*;
 import org.apache.http.protocol.HttpContext;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class UpdateRequestHandler implements HttpAsyncRequestHandler<HttpRequest> {
     private Peer peer;
 
     public UpdateRequestHandler(Peer peer) {
         this.peer = peer;
+
     }
 
     /**

@@ -16,10 +16,6 @@ public class StatusRequestHandler implements RequestHandler {
 
     @Override
     public HttpResponse handleGet(HttpRequest req, InetSocketAddress address) {
-        try {
-            return Response.ok(self.getState().getAllResponse());
-        } catch (UnsupportedEncodingException ex) {
-            return Response.BAD_REQUEST;
-        }
+        return Response.ok(self.getState().getAllResponse().getBytes());
     }
 }

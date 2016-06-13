@@ -46,8 +46,8 @@ launch_pulse()
 
     UVB_CLASSPATH="$fn_classpath_content"
 
-    JVM_OPTS+=" -server -Xmx15g -javaagent:$quasar_path_content"
-#    JVM_OPTS+=" -Dco.paralleluniverse.fibers.verifyInstrumentation=true"
+    JVM_OPTS+=" -server -Xmx1g -javaagent:$quasar_path_content"
+    JVM_OPTS+=" -Dco.paralleluniverse.fibers.verifyInstrumentation=true"
 
     "$JAVA" $JVM_OPTS -classpath $UVB_CLASSPATH net.batchik.crdt.Main "$@"
 }

@@ -1,5 +1,6 @@
 package net.batchik.crdt.fiber;
 
+import co.paralleluniverse.fibers.SuspendExecution;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -26,10 +27,11 @@ public class HttpRouter {
 
     private HttpRouter(ArrayList<EndPointEntry> endPointEntries, int parallelism) {
         this.endPointEntries = endPointEntries;
-        executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
+        //executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
+        executor = MoreExecutors.listeningDecorator(Executors.newWorkStealingPool());
     }
 
-    ListenableFuture<HttpResponse> route(HttpRequest request, InetSocketAddress address, InputStream payload) {
+    HttpResponse route(HttpRequest request, InetSocketAddress address, InputStream payload) throws SuspendExecution {
         try {
             final URI uri = new URI(request.getRequestLine().getUri());
             final String path = uri.getPath();
@@ -37,16 +39,15 @@ public class HttpRouter {
             final String method = request.getRequestLine().getMethod();
 
             for (EndPointEntry entry : endPointEntries) {
-                log.debug("testing: " + entry.getPattern());
                 if (entry.getPattern().matcher(path).matches()) {
-                    return executor.submit(() -> entry.getHandler().handleGet(request, address));
+                    return entry.getHandler().handleGet(request, address);
                 }
             }
             log.debug("no handler found for path: " + path);
         } catch (URISyntaxException ex) {
             log.error("uri syntax error", ex);
         }
-        return Futures.immediateFuture(notFoundHandler.handleGet(request, address));
+        return notFoundHandler.handleGet(request, address);
 
     }
 

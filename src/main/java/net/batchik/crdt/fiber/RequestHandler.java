@@ -1,5 +1,6 @@
 package net.batchik.crdt.fiber;
 
+import co.paralleluniverse.fibers.SuspendExecution;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 
@@ -12,7 +13,7 @@ import java.util.HashMap;
  * Interface to the different supported HTTP methods
  */
 public interface RequestHandler {
-    default HttpResponse handleGet(HttpRequest req, InetSocketAddress address) {
+    default HttpResponse handleGet(HttpRequest req, InetSocketAddress address) throws SuspendExecution {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 

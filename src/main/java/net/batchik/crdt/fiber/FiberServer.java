@@ -9,7 +9,11 @@ import co.paralleluniverse.fibers.futures.AsyncListenableFuture;
 import co.paralleluniverse.fibers.io.FiberServerSocketChannel;
 import co.paralleluniverse.fibers.io.FiberSocketChannel;
 import co.paralleluniverse.strands.Strand;
+import co.paralleluniverse.strands.SuspendableCallable;
 import co.paralleluniverse.strands.SuspendableRunnable;
+import co.paralleluniverse.strands.SuspendableUtils;
+import com.codahale.metrics.Timer;
+import net.batchik.crdt.Main;
 import net.batchik.crdt.Service;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
@@ -20,6 +24,7 @@ import org.apache.http.impl.entity.StrictContentLengthStrategy;
 import org.apache.http.impl.io.*;
 import org.apache.http.impl.nio.bootstrap.HttpServer;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicHttpRequest;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -29,6 +34,8 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.codahale.metrics.MetricRegistry.name;
 
 public class FiberServer extends Service {
     private static Logger log = LogManager.getLogger(FiberServer.class);
@@ -45,6 +52,9 @@ public class FiberServer extends Service {
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
+
+    private final Timer responseTime = Main.metrics.timer(name(RequestHandler.class, "fiber-response-time"));
+
 
     public FiberServer(String address, int port, HttpRouter router) {
         fiberScheduler = new FiberForkJoinScheduler("web-scheduler", parallelism);
@@ -64,43 +74,49 @@ public class FiberServer extends Service {
             throw new Exception("server has already been shut down");
         }
 
-        Fiber<Void> bindFiber = new Fiber<>(fiberScheduler, () -> {
-            try {
-                InetSocketAddress socketAddress = new InetSocketAddress(address, port);
-                log.debug("fiber server binding to " + address + ":" + port);
-                serverChannel = FiberServerSocketChannel.open(null).bind(socketAddress);
+        Fiber<Void> bindFiber = new Fiber<>(fiberScheduler, new SuspendableCallable<Void>() {
+            @Override
+            public Void run() throws SuspendExecution, InterruptedException {
+                try {
+                    InetSocketAddress socketAddress = new InetSocketAddress(address, port);
+                    log.debug("fiber server binding to " + address + ":" + port);
+                    serverChannel = FiberServerSocketChannel.open(null).bind(socketAddress);
 
-                for (;;) {
-                    if (shutdown.get()) {
-                        log.info("Server was shutdown, exiting server routine.");
-                        break;
+                    for (;;) {
+                        if (shutdown.get()) {
+                            log.info("Server was shutdown, exiting server routine.");
+                            break;
+                        }
+                        final FiberSocketChannel ch = serverChannel.accept();
+                        final InetSocketAddress remoteAddress = (InetSocketAddress) ch.getRemoteAddress();
+
+                        new Fiber<>(fiberScheduler, new SuspendableCallable<Void>() {
+                            @Override
+                            public Void run() throws SuspendExecution, InterruptedException {
+                                fiberServerRoutine(remoteAddress, ch);
+                                return null;
+                            }
+                        }).start();
                     }
-                    final FiberSocketChannel ch = serverChannel.accept();
-                    final InetSocketAddress remoteAddress = (InetSocketAddress) ch.getRemoteAddress();
+                    serverChannel.close();
 
-                    new Fiber<Void>(fiberScheduler, () -> {
-                        try {
-                            fiberServerRoutine(remoteAddress, ch);
-                        } catch (IOException ignored) {}
-                    }).start();
+                } catch (IOException ex) {
+                    log.error("io exception while opening socket", ex);
+                    shutdown.set(true);
                 }
-                serverChannel.close();
-
-            } catch (IOException ex) {
-                log.error("io exception while opening socket", ex);
-                shutdown.set(true);
+                return null;
             }
-
         });
-
         bindFiber.start();
     }
 
-    private void fiberServerRoutine(InetSocketAddress address, FiberSocketChannel ch)
-            throws SuspendExecution, InterruptedException, IOException {
+    private void fiberServerRoutine(InetSocketAddress address, FiberSocketChannel chTmp)
+            throws SuspendExecution, InterruptedException {
         long startTime = System.currentTimeMillis();
+        final Timer.Context context = responseTime.time();
 
-        try {
+
+        try (FiberSocketChannel ch = chTmp) {
             final SessionInputBufferImpl sessionInputBuffer = new SessionInputBufferImpl(transMetricImpl, SESSION_BUFFER_SIZE);
             final SessionOutputBufferImpl sessionOutputBuffer = new SessionOutputBufferImpl(transMetricImpl, SESSION_BUFFER_SIZE);
 
@@ -127,8 +143,8 @@ public class FiberServer extends Service {
                     }
                 }
             }
-             /* We can wrap this in a fiber if we feel we can be more async */
-            HttpResponse rawResponse = AsyncListenableFuture.get(router.route(rawRequest, address, contentStream));
+            /* We can wrap this in a fiber if we feel we can be more async */
+            HttpResponse rawResponse = router.route(rawRequest, address, contentStream);
             //rawResponse.addHeader(new BasicHeader("Access-Control-Allow-Origin", "*"));
 
             DefaultHttpResponseWriter msgWriter = new DefaultHttpResponseWriter(sessionOutputBuffer);
@@ -136,23 +152,17 @@ public class FiberServer extends Service {
             sessionOutputBuffer.flush(); // flushes the header
 
             if (rawResponse.getEntity() != null) {
+                log.info("entity: " + rawResponse.getEntity());
                 rawResponse.getEntity().writeTo(os);
             }
-
             os.flush();
             sessionOutputBuffer.flush();
-            ch.close();
-
         } catch (HttpException | IOException e) {
             log.error("Error processing request: " + e.getMessage(), e);
-            ch.close();
-        } catch (ExecutionException e) {
-            log.error("Failed to properly build response: " + e.getLocalizedMessage(), e);
-            ch.close();
-        } finally {
-            long endTime = System.currentTimeMillis();
-            log.debug("Total Time: " + (endTime - startTime) + "ms");
         }
+        long endTime = System.currentTimeMillis();
+        log.debug("Total Time: " + (endTime - startTime) + "ms");
+        context.stop();
 
     }
 

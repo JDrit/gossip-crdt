@@ -1,5 +1,7 @@
 package net.batchik.crdt;
 
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.MetricRegistry;
 import net.batchik.crdt.fiber.FiberServer;
 import net.batchik.crdt.fiber.HttpRouter;
 import net.batchik.crdt.fiber.StatusRequestHandler;
@@ -19,6 +21,7 @@ import org.apache.log4j.Logger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
     private static final Logger log = Logger.getLogger(Main.class.getName());
@@ -32,6 +35,13 @@ public class Main {
     private static final String DEFAULT_GOSSIP_ADDRESS = "0.0.0.0";
     private static final String DEFAULT_WEB_ADDRESS = "0.0.0.0:6000";
     private static final int DEFAULT_GOSSIP_TIME = 5000;
+
+    public static final MetricRegistry metrics = new MetricRegistry();
+
+    static ConsoleReporter reporter = ConsoleReporter.forRegistry(Main.metrics)
+            .convertRatesTo(TimeUnit.SECONDS)
+            .convertDurationsTo(TimeUnit.MILLISECONDS)
+            .build();
 
     static {
         options.addOption(Option.builder()
@@ -173,9 +183,12 @@ public class Main {
         log.info("web starting...");
         //httpServer.start();
 
+        reporter.start(3, TimeUnit.SECONDS);
+
         HttpRouter router = HttpRouter.builder()
-                .registerEndpoint("/", new StatusRequestHandler(self))
+                .registerEndpoint("/status", new StatusRequestHandler(self))
                 .registerEndpoint("/update/.*", new UpdateRequestHandler(self))
+                .setParallelism(1024 * 1024)
                 .build();
 
         Service httpServer = new FiberServer("0.0.0.0", 6000, router);

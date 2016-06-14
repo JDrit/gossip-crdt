@@ -18,3 +18,5 @@ build/
 src/generated/
 
 *~
+
+out.hprof

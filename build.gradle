@@ -52,6 +52,10 @@ dependencies {
 
 }
 
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.13'
+}
+
 compileThrift {
     recurse true
     generator 'html'

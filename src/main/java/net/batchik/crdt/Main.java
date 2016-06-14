@@ -32,30 +32,18 @@ public class Main {
     private static final String VERSION = "0.0.1";
 
     private static final int DEFAULT_GOSSIP_PORT = 5000;
-    private static final String DEFAULT_GOSSIP_ADDRESS = "0.0.0.0";
+    private static final int DEFAULT_FIBER_PORT = 6000;
     private static final String DEFAULT_WEB_ADDRESS = "0.0.0.0:6000";
     private static final int DEFAULT_GOSSIP_TIME = 5000;
 
     public static final MetricRegistry metrics = new MetricRegistry();
 
-    static ConsoleReporter reporter = ConsoleReporter.forRegistry(Main.metrics)
+    private static final ConsoleReporter reporter = ConsoleReporter.forRegistry(Main.metrics)
             .convertRatesTo(TimeUnit.SECONDS)
             .convertDurationsTo(TimeUnit.MILLISECONDS)
             .build();
 
     static {
-        options.addOption(Option.builder()
-                .argName("config")
-                .hasArg()
-                .desc("configuration file")
-                .longOpt("config")
-                .build());
-        options.addOption(Option.builder()
-                .argName("peer")
-                .hasArg()
-                .desc("the address of another node")
-                .longOpt("peer")
-                .build());
         options.addOption(Option.builder()
                 .argName("zookeeper")
                 .hasArg()
@@ -72,7 +60,6 @@ public class Main {
         return new InetSocketAddress(split[0], Integer.parseInt(split[1]));
     }
 
-
     public static void main(String[] args) throws Exception {
         CommandLine cmd = parser.parse(options, args);
 
@@ -86,72 +73,16 @@ public class Main {
             System.exit(0);
         }
 
-        String gossipAddress = DEFAULT_GOSSIP_ADDRESS + ":" + DEFAULT_GOSSIP_PORT;
         String webAddress = DEFAULT_WEB_ADDRESS;
         int sleepTime = DEFAULT_GOSSIP_TIME;
         List<Peer> peers = new ArrayList<>();
         Peer self = null;
         ParticipantStates states = null;
 
-        if (cmd.hasOption("config")) {
-
-            CompositeConfiguration config = new CompositeConfiguration();
-            config.addConfiguration(new SystemConfiguration());
-            config.addConfiguration(new PropertiesConfiguration(cmd.getOptionValue("config")));
-            config.setThrowExceptionOnMissing(false);
-
-            String level = config.getString("log.level");
-            if (level != null) {
-                switch (level.toUpperCase()) {
-                    case "TRACE":
-                        Logger.getRootLogger().setLevel(Level.TRACE);
-                        break;
-                    case "DEBUG":
-                        Logger.getRootLogger().setLevel(Level.DEBUG);
-                        break;
-                    case "INFO":
-                        Logger.getRootLogger().setLevel(Level.INFO);
-                        break;
-                    case "WARN":
-                        Logger.getRootLogger().setLevel(Level.WARN);
-                        break;
-                    case "ERROR":
-                        Logger.getRootLogger().setLevel(Level.ERROR);
-                        break;
-                    case "FATAL":
-                        Logger.getRootLogger().setLevel(Level.FATAL);
-                        break;
-                }
-            }
-
-            gossipAddress = config.getString("gossip.address");
-            self = new Peer(convertAddress(gossipAddress));
-            sleepTime = config.getInt("gossip.time");
-            webAddress = config.getString("web.address");
-
-            for (String peer : config.getStringArray("gossip.peers")) {
-                InetSocketAddress address = convertAddress(peer);
-                peers.add(new Peer(address));
-            }
-            states =  new ParticipantStates(self, peers);
-
-        } else if (cmd.hasOption("peer")) {
-            peers.add(new Peer(convertAddress(cmd.getOptionValue("peer"))));
-            self = new Peer(convertAddress(gossipAddress));
-            states =  new ParticipantStates(self, peers);
-
-        } else if (cmd.hasOption("zk")) {
-
-            int max = 5000;
-            int min = 3000;
-            int port = new Random().nextInt(max - min + 1) + min;
-            webAddress = "0.0.0.0:" + (port + 1000);
-
-            //int port = DEFAULT_GOSSIP_PORT;
-
-            gossipAddress = InetAddress.getLocalHost().getHostAddress();
-            self = new Peer(new InetSocketAddress(gossipAddress, port));
+        if (cmd.hasOption("zk")) {
             String zk = cmd.getOptionValue("zk");
+            String gossipAddress = InetAddress.getLocalHost().getHostAddress();
+            self = new Peer(new InetSocketAddress(gossipAddress, DEFAULT_GOSSIP_PORT));
             final String serviceName = "uvb-server";
             ZKServiceDiscovery zkService = new ZKServiceDiscovery(zk, serviceName);
             zkService.start();
@@ -165,7 +96,7 @@ public class Main {
             }
             states =  new ParticipantStates(self, peers);
 
-            zkService.register(gossipAddress, port);
+            zkService.register(gossipAddress, self.getAddress().getPort());
             zkService.addListener(states);
             log.info("instance registered");
 
@@ -180,7 +111,6 @@ public class Main {
         log.info("web requests on: " + webAddress);
 
         //Service httpServer = new WebServer(convertAddress(webAddress), self);
-        log.info("web starting...");
         //httpServer.start();
 
         reporter.start(3, TimeUnit.SECONDS);
@@ -188,14 +118,12 @@ public class Main {
         HttpRouter router = HttpRouter.builder()
                 .registerEndpoint("/status", new StatusRequestHandler(self))
                 .registerEndpoint("/update/.*", new UpdateRequestHandler(self))
-                .setParallelism(1024 * 1024)
                 .build();
 
-        Service httpServer = new FiberServer("0.0.0.0", 6000, router);
-        httpServer.start();
+        Service fiberServer = new FiberServer("0.0.0.0", DEFAULT_FIBER_PORT, router);
+        fiberServer.start();
 
         Service gossipServer = new GossipServer(states, sleepTime);
-        log.info("thrift backend starting...");
         gossipServer.start();
 
         Thread.sleep(Long.MAX_VALUE);

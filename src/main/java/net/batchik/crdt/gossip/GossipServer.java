@@ -16,10 +16,8 @@ public class GossipServer extends Service {
     private final TServer tServer;
 
     public GossipServer(ParticipantStates states, int sleepTime) throws TTransportException {
-
-
-        GossipThread thread = new GossipThread(states, sleepTime);
-        thread.start();
+        //GossipThread thread = new GossipThread(states, sleepTime);
+        //thread.start();
 
         GossipServiceHandler handler = new GossipServiceHandler(states);
         GossipService.Processor processor = new GossipService.Processor<GossipService.Iface>(handler);

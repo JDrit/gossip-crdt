@@ -1,10 +1,6 @@
 package net.batchik.crdt.fiber;
 
 import co.paralleluniverse.fibers.SuspendExecution;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.log4j.LogManager;
@@ -15,22 +11,31 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
+/**
+ * The router used to redirect HTTP request to the correct handler. Used regular expressions
+ * to match the URI.
+ */
 public class HttpRouter {
     private static final Logger log = LogManager.getLogger(HttpRouter.class);
-    private final ListeningExecutorService executor;
     private final ArrayList<EndPointEntry> endPointEntries;
 
     private static RequestHandler notFoundHandler = new RequestHandler() {};
 
-    private HttpRouter(ArrayList<EndPointEntry> endPointEntries, int parallelism) {
+    private HttpRouter(ArrayList<EndPointEntry> endPointEntries) {
         this.endPointEntries = endPointEntries;
-        //executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
-        executor = MoreExecutors.listeningDecorator(Executors.newWorkStealingPool());
     }
 
+    /**
+     * Takes the request and run the correct handler on it. This can suspend if needed to by the
+     * fiber scheduler
+     * @param request the request sent from the client
+     * @param address the address of the client that sent the request
+     * @param payload the payload that came with the request
+     * @return the response from the given handler
+     * @throws SuspendExecution
+     */
     HttpResponse route(HttpRequest request, InetSocketAddress address, InputStream payload) throws SuspendExecution {
         try {
             final URI uri = new URI(request.getRequestLine().getUri());
@@ -69,9 +74,11 @@ public class HttpRouter {
         public RequestHandler getHandler() { return handler; }
     }
 
+    /**
+     * Used to build the router for all HTTP Requests. Implements the builder pattern.
+     */
     public static class HttpRouterBuilder {
         ArrayList<EndPointEntry> endpoints;
-        int parallelism = 10000;
 
         public HttpRouterBuilder() {
             this.endpoints = new ArrayList<>();
@@ -82,13 +89,8 @@ public class HttpRouter {
             return this;
         }
 
-        public HttpRouterBuilder setParallelism(int parallelism) {
-            this.parallelism = parallelism;
-            return this;
-        }
-
         public HttpRouter build() {
-            return new HttpRouter(endpoints, parallelism);
+            return new HttpRouter(endpoints);
         }
 
 

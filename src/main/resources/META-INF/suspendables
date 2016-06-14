@@ -48,3 +48,7 @@ net.batchik.crdt.web.StatusRequestHandler.handle(Ljava/lang/Object;Lorg/apache/h
 net.batchik.crdt.web.StatusRequestHandler.handle(Lorg/apache/http/HttpRequest;Lorg/apache/http/nio/protocol/HttpAsyncExchange;Lorg/apache/http/protocol/HttpContext;)V
 net.batchik.crdt.web.UpdateRequestHandler.handle(Ljava/lang/Object;Lorg/apache/http/nio/protocol/HttpAsyncExchange;Lorg/apache/http/protocol/HttpContext;)V
 net.batchik.crdt.web.UpdateRequestHandler.handle(Lorg/apache/http/HttpRequest;Lorg/apache/http/nio/protocol/HttpAsyncExchange;Lorg/apache/http/protocol/HttpContext;)V
+net.batchik.crdt.gossip.IndividualState.getMaxVersion()J
+net.batchik.crdt.gossip.ParticipantStates.getInitialDigest()Ljava/util/Map;
+net.batchik.crdt.gossip.ParticipantStates.newPeer(Ljava/lang/String;)V
+net.batchik.crdt.zookeeper.ZKServiceDiscovery$2.cacheChanged()V

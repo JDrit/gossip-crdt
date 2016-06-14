@@ -5,6 +5,7 @@ import java.util.*;
 
 import co.paralleluniverse.fibers.SuspendExecution;
 import co.paralleluniverse.strands.concurrent.ReentrantLock;
+import co.paralleluniverse.strands.concurrent.ReentrantReadWriteLock;
 import net.batchik.crdt.gossip.datatypes.GCounterUtil;
 import net.batchik.crdt.gossip.datatypes.PNCounterUtil;
 import org.apache.log4j.Logger;
@@ -16,20 +17,20 @@ public class IndividualState {
     private HashMap<String, Tuple<Object, Long>> state;
     private String id;
     private long maxVersion;
-    private ReentrantLock lock;
+    private ReentrantReadWriteLock lock;
 
     public IndividualState(String id) {
         this.id = id;
         state = new HashMap<>();
         maxVersion = 0L;
-        lock = new ReentrantLock();
+        lock = new ReentrantReadWriteLock(true);
     }
 
     public long getMaxVersion() {
         long m;
-        lock.lock();
+        lock.readLock().lock();
         m = maxVersion;
-        lock.unlock();
+        lock.readLock().unlock();
         return m;
     }
 
@@ -44,7 +45,7 @@ public class IndividualState {
     }
 
     public void incrementCounter(String key) throws SuspendExecution {
-        lock.lock();
+        lock.writeLock().lock();
         Tuple<Object, Long> tuple = state.get(key);
         if (tuple == null) {
             state.put(key, new Tuple<>(GCounterUtil.newGCounter(id), ++maxVersion));
@@ -53,11 +54,11 @@ public class IndividualState {
             GCounterUtil.increment(counter, id);
             tuple.snd = ++maxVersion;
         }
-        lock.unlock();
+        lock.writeLock().unlock();
     }
 
     void merge(String key, Object value, long version) {
-        lock.lock();
+        lock.writeLock().lock();
         Tuple<Object, Long> tuple = state.get(key);
 
         if (tuple == null) {
@@ -79,7 +80,7 @@ public class IndividualState {
                 maxVersion = tuple.snd;
             }
         }
-        lock.unlock();
+        lock.writeLock().unlock();
     }
 
     /**
@@ -90,7 +91,7 @@ public class IndividualState {
      * @return the list of digests for this individual state
      */
     List<Digest> getDeltaScuttle(long qMaxVersion, String selfAddress) {
-        lock.lock();
+        lock.readLock().lock();
         List<Digest> digests = new ArrayList<>();
 
         for (Map.Entry<String, Tuple<Object, Long>> entry : state.entrySet()) {
@@ -112,7 +113,7 @@ public class IndividualState {
                 digests.add(digest);
             }
         }
-        lock.unlock();
+        lock.readLock().lock();
         return digests;
     }
 
@@ -121,7 +122,7 @@ public class IndividualState {
      * @return string message
      */
     public String getAllResponse() {
-        lock.lock();
+        lock.readLock().lock();
         StringBuilder builder = new StringBuilder();
         builder.append("response: (").append(state.size()).append(" elements)\n");
         Set<Map.Entry<String, Tuple<Object, Long>>>  entries = state.entrySet();
@@ -140,7 +141,7 @@ public class IndividualState {
                     .append(format.format(GCounterUtil.value((GCounter) entry.getValue().fst)))
                     .append("\n");
         }
-        lock.unlock();
+        lock.readLock().lock();
         return builder.toString();
     }
 }

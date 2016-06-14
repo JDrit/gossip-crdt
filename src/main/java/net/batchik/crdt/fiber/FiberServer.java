@@ -15,16 +15,15 @@ import co.paralleluniverse.strands.SuspendableUtils;
 import com.codahale.metrics.Timer;
 import net.batchik.crdt.Main;
 import net.batchik.crdt.Service;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
+import org.apache.http.*;
 import org.apache.http.entity.ContentLengthStrategy;
 import org.apache.http.impl.entity.StrictContentLengthStrategy;
 import org.apache.http.impl.io.*;
 import org.apache.http.impl.nio.bootstrap.HttpServer;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicHttpRequest;
+import org.apache.http.message.BasicHttpResponse;
+import org.apache.http.message.BasicStatusLine;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -145,7 +144,7 @@ public class FiberServer extends Service {
             }
             /* We can wrap this in a fiber if we feel we can be more async */
             HttpResponse rawResponse = router.route(rawRequest, address, contentStream);
-            //rawResponse.addHeader(new BasicHeader("Access-Control-Allow-Origin", "*"));
+            //HttpResponse rawResponse = Response.OK;
 
             DefaultHttpResponseWriter msgWriter = new DefaultHttpResponseWriter(sessionOutputBuffer);
             msgWriter.write(rawResponse);

@@ -29,9 +29,9 @@ public final class Response {
         return response;
     }
 
-    public static HttpResponse ok(String payload) throws UnsupportedEncodingException {
+    public static HttpResponse ok(String payload) {
         HttpResponse response = new BasicHttpResponse(VERSION, HttpStatus.SC_OK, "OK");
-        response.setEntity(new StringEntity(payload));
+        response.setEntity(new ByteArrayEntity(payload.getBytes()));
         return response;
     }
 }

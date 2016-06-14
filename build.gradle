@@ -2,15 +2,11 @@ buildscript {
     repositories {
         mavenCentral()
     }
-
-    apply plugin: 'java'
-    apply plugin: 'idea'
-    apply plugin: 'application'
 }
 plugins {
     id 'java'
-    id 'eclipse'
     id 'idea'
+    id 'application'
     id "org.jruyi.thrift" version "0.3.1"
     id "us.kirchmeier.capsule" version "1.0.2"
 }
@@ -18,9 +14,9 @@ plugins {
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 defaultTasks 'build', 'writeClasspath'
 version = '1.0'
-def jarTitle = 'gossip-crdt'
+def jarTitle = 'uvb-server'
 def mainClass = 'net.batchik.crdt.Main'
-mainClassName = mainClass
+def mainClassName = mainClass
 
 repositories {
     mavenCentral()
@@ -86,7 +82,7 @@ classes {
 }
 
 jar {
-    baseName = 'crdt'
+    baseName = 'uvb-server'
     manifest {
          attributes (
                  'Implementation-Title': jarTitle,
@@ -108,10 +104,26 @@ def getDependencies(config) {
     }
 }
 
-task mavenCapsule(type: MavenCapsule){
+task fatCapsule(type: FatCapsule) {
     applicationClass mainClass
-    from sourceSets.main.output // this way we don't need to extract
-    from { configurations.capsule.collect { zipTree(it) } }
+    baseName = 'uvb-server-fat-capsule'
+
+    manifest {
+        attributes(
+                'Main-Class'  : 'Capsule',
+                'Application-Class' : mainClassName,
+                'Min-Java-Version' : '1.8.0',
+                'JVM-Args' : run.jvmArgs.join(' '), // copy JVM args from the run task
+                'System-Properties' : run.systemProperties.collect { k,v -> "$k=$v" }.join(' '), // copy system properties
+                'Java-Agents' : configurations.quasar.iterator().next().getName()
+        )
+    }
+}
+
+task mavenCapsule(type: MavenCapsule) {
+    applicationClass mainClass
+    baseName = 'uvb-server-capsule'
+
     manifest {
         attributes(
                 'Main-Class'  : 'Capsule',

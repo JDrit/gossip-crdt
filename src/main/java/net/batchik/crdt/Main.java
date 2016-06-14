@@ -101,7 +101,7 @@ public class Main {
             log.info("instance registered");
 
         } else {
-            System.out.println("no config file specified or peer given, please specify one. exiting...");
+            log.error("no zookeeper instance given, please specify with '--zk'");
             System.exit(1);
         }
 

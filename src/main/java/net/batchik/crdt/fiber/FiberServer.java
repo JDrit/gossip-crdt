@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.nio.channels.Channels;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -109,19 +110,22 @@ public class FiberServer extends Service {
         bindFiber.start();
     }
 
+    /**
+     * Handles all logic inside the fiber created for the given request.
+     * @param address the remote address of the client
+     * @param chTmp the channel to communicate on
+     * @throws SuspendExecution
+     * @throws InterruptedException
+     */
     private void fiberServerRoutine(InetSocketAddress address, FiberSocketChannel chTmp)
             throws SuspendExecution, InterruptedException {
-        long startTime = System.currentTimeMillis();
         final Timer.Context context = responseTime.time();
-
 
         try (FiberSocketChannel ch = chTmp) {
             final SessionInputBufferImpl sessionInputBuffer = new SessionInputBufferImpl(transMetricImpl, SESSION_BUFFER_SIZE);
             final SessionOutputBufferImpl sessionOutputBuffer = new SessionOutputBufferImpl(transMetricImpl, SESSION_BUFFER_SIZE);
-
             OutputStream os = FiberChannels.newOutputStream(ch);
             InputStream is = FiberChannels.newInputStream(ch);
-
             sessionOutputBuffer.bind(os);
             sessionInputBuffer.bind(is);
 
@@ -130,7 +134,7 @@ public class FiberServer extends Service {
 
             // deals with PUT requests
             InputStream contentStream = null;
-            if (rawRequest instanceof HttpEntityEnclosingRequest) {
+            /*if (rawRequest instanceof HttpEntityEnclosingRequest) {
                 long len = contentLengthStrategy.determineLength(rawRequest);
                 if (len > 0) {
                     if (len == ContentLengthStrategy.CHUNKED) {
@@ -141,7 +145,7 @@ public class FiberServer extends Service {
                         contentStream = new ContentLengthInputStream(sessionInputBuffer, len);
                     }
                 }
-            }
+            }*/
             /* We can wrap this in a fiber if we feel we can be more async */
             HttpResponse rawResponse = router.route(rawRequest, address, contentStream);
             //HttpResponse rawResponse = Response.OK;
@@ -151,7 +155,6 @@ public class FiberServer extends Service {
             sessionOutputBuffer.flush(); // flushes the header
 
             if (rawResponse.getEntity() != null) {
-                log.info("entity: " + rawResponse.getEntity());
                 rawResponse.getEntity().writeTo(os);
             }
             os.flush();
@@ -159,8 +162,6 @@ public class FiberServer extends Service {
         } catch (HttpException | IOException e) {
             log.error("Error processing request: " + e.getMessage(), e);
         }
-        long endTime = System.currentTimeMillis();
-        log.debug("Total Time: " + (endTime - startTime) + "ms");
         context.stop();
 
     }

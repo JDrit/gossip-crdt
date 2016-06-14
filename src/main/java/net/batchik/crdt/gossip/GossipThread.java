@@ -13,8 +13,8 @@ import org.apache.thrift.transport.TTransportException;
 import java.util.Map;
 
 public class GossipThread extends Thread {
-    static Logger log = Logger.getLogger(GossipThread.class.getName());
-    ParticipantStates states;
+    private static Logger log = Logger.getLogger(GossipThread.class.getName());
+    private ParticipantStates states;
     private int sleepTime;
 
     public GossipThread(ParticipantStates states, int sleepTime) {

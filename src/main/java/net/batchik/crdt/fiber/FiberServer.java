@@ -46,9 +46,8 @@ public class FiberServer extends Service {
     private FiberServerSocketChannel serverChannel;
     private static final int parallelism = 10000;
     private final FiberScheduler fiberScheduler;
+    private final InetSocketAddress address;
     private final HttpRouter router;
-    private final String address;
-    private final int port;
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -56,11 +55,11 @@ public class FiberServer extends Service {
     private final Timer responseTime = Main.metrics.timer(name(RequestHandler.class, "fiber-response-time"));
 
 
-    public FiberServer(String address, int port, HttpRouter router) {
+    public FiberServer(InetSocketAddress address, HttpRouter router) {
         fiberScheduler = new FiberForkJoinScheduler("web-scheduler", parallelism);
         this.address = address;
         this.router = router;
-        this.port = port;
+
     }
 
 
@@ -78,9 +77,7 @@ public class FiberServer extends Service {
             @Override
             public Void run() throws SuspendExecution, InterruptedException {
                 try {
-                    InetSocketAddress socketAddress = new InetSocketAddress(address, port);
-                    log.debug("fiber server binding to " + address + ":" + port);
-                    serverChannel = FiberServerSocketChannel.open(null).bind(socketAddress);
+                    serverChannel = FiberServerSocketChannel.open(null).bind(address);
 
                     for (;;) {
                         if (shutdown.get()) {

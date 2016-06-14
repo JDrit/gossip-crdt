@@ -30,9 +30,16 @@ public class ParticipantStates implements ZKServiceListener {
         }
     }
 
-    public Peer getSelf() { return self; }
+    Peer getSelf() { return self; }
 
-    synchronized Map<String, Peer> getPeers() { return peerMap; }
+    Map<String, Peer> getPeers() {
+        lock.readLock().lock();
+        try {
+            return peerMap;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 
     /**
      * Called when a new peer is added to the cluster.
@@ -42,13 +49,16 @@ public class ParticipantStates implements ZKServiceListener {
      */
     public void newPeer(String address) {
         lock.writeLock().lock();
-        if (!peerMap.containsKey(address)) {
-            log.info("Adding peer at address: " + address);
-            peerMap.put(address, new Peer(Main.convertAddress(address)));
-        } else {
-            log.debug("Address " + address + " is already in the cluster");
+        try {
+            if (!peerMap.containsKey(address)) {
+                log.info("Adding peer at address: " + address);
+                peerMap.put(address, new Peer(Main.convertAddress(address)));
+            } else {
+                log.debug("Address " + address + " is already in the cluster");
+            }
+        } finally {
+            lock.writeLock().unlock();
         }
-        lock.writeLock().unlock();
     }
 
     /**
@@ -57,12 +67,15 @@ public class ParticipantStates implements ZKServiceListener {
      */
     Map<String, Long> getInitialDigest() {
         lock.readLock().lock();
-        HashMap<String, Long> digest = new HashMap<>(peerMap.size());
-        for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
-            digest.put(entry.getKey(), entry.getValue().getState().getMaxVersion());
+        try {
+            HashMap<String, Long> digest = new HashMap<>(peerMap.size());
+            for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
+                digest.put(entry.getKey(), entry.getValue().getState().getMaxVersion());
+            }
+            return digest;
+        } finally {
+            lock.readLock().unlock();
         }
-        lock.readLock().unlock();
-        return digest;
     }
 
     /**
@@ -71,14 +84,17 @@ public class ParticipantStates implements ZKServiceListener {
      */
     List<Digest> getDeltaScuttle(Map<String, Long> initial) {
         lock.readLock().lock();
-        List<Digest> digests = new ArrayList<>();
-        for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
-            Long qMaxVersion = initial.get(entry.getKey());
-            if (qMaxVersion != null) {
-                digests.addAll(entry.getValue().getState().getDeltaScuttle(qMaxVersion, entry.getKey()));
+        try {
+            List<Digest> digests = new ArrayList<>();
+            for (Map.Entry<String, Peer> entry : peerMap.entrySet()) {
+                Long qMaxVersion = initial.get(entry.getKey());
+                if (qMaxVersion != null) {
+                    digests.addAll(entry.getValue().getState().getDeltaScuttle(qMaxVersion, entry.getKey()));
+                }
             }
+            return digests;
+        } finally {
+            lock.readLock().unlock();
         }
-        lock.readLock().unlock();
-        return digests;
     }
 }

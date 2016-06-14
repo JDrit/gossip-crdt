@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Collection;
 import java.util.concurrent.Executors;
 
@@ -61,11 +62,11 @@ public class ZKServiceDiscovery extends Service {
      * @param port the port of the new instance
      * @throws Exception
      */
-    public void register(String address, int port) throws Exception {
+    public void register(InetAddress address, int port) throws Exception {
         final ServiceInstance<String> thisInstance = ServiceInstance.<String>builder()
                 .name(serviceName)
                 .port(port)
-                .address(address)
+                .address(address.getHostAddress())
                 .uriSpec(new UriSpec("{scheme}://{address}:{port}"))
                 .build();
 

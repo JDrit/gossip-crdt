@@ -35,6 +35,7 @@ public class Main {
     private static final int DEFAULT_FIBER_PORT = 6000;
     private static final String DEFAULT_WEB_ADDRESS = "0.0.0.0:6000";
     private static final int DEFAULT_GOSSIP_TIME = 5000;
+    private static final String DEFAULT_SERVICE_NAME = "uvb-server";
 
     public static final MetricRegistry metrics = new MetricRegistry();
 
@@ -62,6 +63,7 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         CommandLine cmd = parser.parse(options, args);
+        ArrayList<Peer> peers = new ArrayList<>();
 
         if (cmd.hasOption("help")) {
             formatter.printHelp("gossip-crdt", "Overview of argument flags", options,
@@ -72,58 +74,53 @@ public class Main {
             System.out.println("version: " + VERSION);
             System.exit(0);
         }
-
-        String webAddress = DEFAULT_WEB_ADDRESS;
-        int sleepTime = DEFAULT_GOSSIP_TIME;
-        List<Peer> peers = new ArrayList<>();
-        Peer self = null;
-        ParticipantStates states = null;
-
-        if (cmd.hasOption("zk")) {
-            String zk = cmd.getOptionValue("zk");
-            String gossipAddress = InetAddress.getLocalHost().getHostAddress();
-            self = new Peer(new InetSocketAddress(gossipAddress, DEFAULT_GOSSIP_PORT));
-            final String serviceName = "uvb-server";
-            ZKServiceDiscovery zkService = new ZKServiceDiscovery(zk, serviceName);
-            zkService.start();
-
-            for (ServiceInstance<String> instance : zkService.getInstances()) {
-                String instanceAddress = instance.getAddress();
-                int instancePort = instance.getPort();
-                InetSocketAddress address = new InetSocketAddress(instanceAddress, instancePort);
-                log.info("adding peer at address: " + instanceAddress + ":" + instancePort);
-                peers.add(new Peer(address));
-            }
-            states =  new ParticipantStates(self, peers);
-
-            zkService.register(gossipAddress, self.getAddress().getPort());
-            zkService.addListener(states);
-            log.info("instance registered");
-
-        } else {
+        if (!cmd.hasOption("zk")) {
             log.error("no zookeeper instance given, please specify with '--zk'");
             System.exit(1);
         }
 
+        int min = 4000;
+        int max = 5000;
+        int gossipPort = new Random().nextInt(max - min + 1) + min;
+        int webPort = gossipPort + 1000;
+
+        String zk = cmd.getOptionValue("zk");
+        InetAddress address = InetAddress.getLocalHost();
+        InetSocketAddress gossipAddress = new InetSocketAddress(address, gossipPort);
+        InetSocketAddress webAddress = new InetSocketAddress(address, webPort);
+        Peer self = new Peer(gossipAddress);
+
+        ZKServiceDiscovery zkService = new ZKServiceDiscovery(zk, DEFAULT_SERVICE_NAME);
+        zkService.start();
+        for (ServiceInstance<String> instance : zkService.getInstances()) {
+            String instanceAddress = instance.getAddress();
+            int instancePort = instance.getPort();
+            InetSocketAddress peerAddress = new InetSocketAddress(instanceAddress, instancePort);
+            log.info("adding peer at address: " + peerAddress);
+            peers.add(new Peer(peerAddress));
+        }
+        ParticipantStates states =  new ParticipantStates(self, peers);
+
+        zkService.register(address, gossipPort);
+        zkService.addListener(states);
+        log.info("instance registered");
+
         log.info("self peer: " + self);
         log.info("starting peer with " + peers.size() + " other peer(s)");
-        log.info("gossipping on: " + states.getSelf().getAddress());
+        log.info("gossipping on: " + gossipAddress);
         log.info("web requests on: " + webAddress);
 
-        //Service httpServer = new WebServer(convertAddress(webAddress), self);
-        //httpServer.start();
-
-        reporter.start(3, TimeUnit.SECONDS);
+        //reporter.start(3, TimeUnit.SECONDS);
 
         HttpRouter router = HttpRouter.builder()
                 .registerEndpoint("/status", new StatusRequestHandler(self))
                 .registerEndpoint("/update/.*", new UpdateRequestHandler(self))
                 .build();
 
-        Service fiberServer = new FiberServer("0.0.0.0", DEFAULT_FIBER_PORT, router);
+        Service fiberServer = new FiberServer(webAddress, router);
         fiberServer.start();
 
-        Service gossipServer = new GossipServer(states, sleepTime);
+        Service gossipServer = new GossipServer(states, DEFAULT_GOSSIP_TIME);
         gossipServer.start();
 
         Thread.sleep(Long.MAX_VALUE);

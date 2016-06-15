@@ -1,8 +1,10 @@
+
 buildscript {
     repositories {
         mavenCentral()
     }
 }
+
 plugins {
     id 'java'
     id 'idea'
@@ -16,7 +18,11 @@ defaultTasks 'build', 'writeClasspath'
 version = '1.0'
 def jarTitle = 'uvb-server'
 def mainClass = 'net.batchik.crdt.Main'
-def mainClassName = mainClass
+mainClassName = mainClass
+group 'net.batchik'
+version '1.0-SNAPSHOT'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
@@ -27,14 +33,10 @@ configurations {
     capsule
 }
 
-group 'net.batchik'
-version '1.0-SNAPSHOT'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
 dependencies {
     // gossip crdt service
     compile group: 'org.apache.thrift', name: 'libthrift', version: '0.9.3'
+    compile group: 'com.pinterest', name: 'quasar-thrift', version: '0.3'
 
     // logging infrastructure
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
@@ -57,6 +59,7 @@ dependencies {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.13'
 }
+
 
 compileThrift {
     recurse true
@@ -90,6 +93,10 @@ jar {
                  'Main-Class': mainClass
          )
     }
+}
+
+run {
+    jvmArgs "-javaagent:${configurations.quasar.iterator().next()}"
 }
 
 // converts Gradle dependencies to Capsule dependencies
@@ -151,6 +158,5 @@ task writeClasspath(dependsOn: build) << {
     }
 }
 
-run {
-    jvmArgs "-javaagent:${configurations.quasar.iterator().next()}"
-}
+idea.module.excludeDirs = []
+idea.module.sourceDirs += file("build/generated-src/thrift/main")

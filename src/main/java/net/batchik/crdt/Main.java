@@ -122,7 +122,5 @@ public class Main {
 
         Service gossipServer = new GossipServer(states, DEFAULT_GOSSIP_TIME);
         gossipServer.start();
-
-        Thread.sleep(Long.MAX_VALUE);
     }
 }

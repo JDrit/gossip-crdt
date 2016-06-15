@@ -1,14 +1,13 @@
 package net.batchik.crdt.gossip;
 
+import com.pinterest.quasar.thrift.TFiberServer;
+import com.pinterest.quasar.thrift.TFiberServerSocket;
 import net.batchik.crdt.Service;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TThreadedSelectorServer;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TNonblockingServerSocket;
-import org.apache.thrift.transport.TNonblockingServerTransport;
-import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.transport.*;
 
 import java.util.List;
 
@@ -21,6 +20,14 @@ public class GossipServer extends Service {
 
         GossipServiceHandler handler = new GossipServiceHandler(states);
         GossipService.Processor processor = new GossipService.Processor<GossipService.Iface>(handler);
+
+        TFiberServerSocket trans = new TFiberServerSocket(states.getSelf().getAddress());
+        TFiberServer.Args targs = new TFiberServer.Args(trans, processor)
+                .protocolFactory(new TBinaryProtocol.Factory())
+                .transportFactory(new TFramedTransport.Factory());
+        tServer = new TFiberServer(targs);
+
+        /*
         TNonblockingServerTransport transport = new TNonblockingServerSocket(states.getSelf().getAddress());
         TThreadedSelectorServer.Args serverArgs = new TThreadedSelectorServer.Args(transport)
             .transportFactory(new TFramedTransport.Factory())
@@ -28,7 +35,7 @@ public class GossipServer extends Service {
             .processor(processor)
             .selectorThreads(4)
             .workerThreads(32);
-        tServer = new TThreadedSelectorServer(serverArgs);
+        tServer = new TThreadedSelectorServer(serverArgs);*/
     }
 
     public void start() {

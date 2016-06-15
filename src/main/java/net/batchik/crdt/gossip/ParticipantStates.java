@@ -1,14 +1,12 @@
 package net.batchik.crdt.gossip;
 
+import co.paralleluniverse.fibers.SuspendExecution;
 import co.paralleluniverse.strands.concurrent.ReentrantReadWriteLock;
 import net.batchik.crdt.Main;
 import net.batchik.crdt.zookeeper.ZKServiceListener;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This is the internal mapping of the cluster, which is used to keep both the state for this node
@@ -32,10 +30,19 @@ public class ParticipantStates implements ZKServiceListener {
 
     Peer getSelf() { return self; }
 
-    Map<String, Peer> getPeers() {
+    Collection<Peer> getPeers() throws SuspendExecution {
         lock.readLock().lock();
         try {
-            return peerMap;
+            return peerMap.values();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    Peer getPeer(String key) {
+        lock.readLock().lock();
+        try {
+            return peerMap.get(key);
         } finally {
             lock.readLock().unlock();
         }

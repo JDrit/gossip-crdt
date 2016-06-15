@@ -1,54 +1,52 @@
 package net.batchik.crdt.gossip;
 
+import co.paralleluniverse.fibers.Fiber;
+import co.paralleluniverse.fibers.SuspendExecution;
+import co.paralleluniverse.fibers.Suspendable;
+import com.pinterest.quasar.thrift.TFiberSocket;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.transport.*;
 
+import java.io.IOException;
 import java.util.Map;
 
-public class GossipThread extends Thread {
+class GossipThread extends Fiber<Void> {
     private static Logger log = Logger.getLogger(GossipThread.class.getName());
     private ParticipantStates states;
     private int sleepTime;
 
-    public GossipThread(ParticipantStates states, int sleepTime) {
+    GossipThread(ParticipantStates states, int sleepTime) {
         this.states = states;
         this.sleepTime = sleepTime;
     }
 
     @Override
-    public void run() {
-        while (true) {
+    public Void run() throws SuspendExecution, InterruptedException {
+        for (;;) {
             try {
-                Thread.sleep(sleepTime);
+                Fiber.sleep(sleepTime);
             } catch (InterruptedException ex) {
                 log.warn("interrupted exception while sleeping...");
             }
 
-            for (Map.Entry<String, Peer> entry : states.getPeers().entrySet()) {
-                String address = entry.getKey();
-                Peer peer = entry.getValue();
+            for (Peer peer : states.getPeers()) {
 
                 // do not try and talk to yourself
                 if (!peer.equals(states.getSelf())) {
                     log.debug("gossiping to " + peer);
-                    String hostname = peer.getAddress().getAddress().getHostAddress();
-                    int port = peer.getAddress().getPort();
 
-                    try (TTransport tran = new TFramedTransport(new TSocket(hostname, port))) {
+                    try (TTransport tran = new TFramedTransport(TFiberSocket.open(peer.getAddress()))) {
                         tran.open();
                         TProtocol protocol = new TBinaryProtocol(tran);
                         GossipService.Client client = new GossipService.Client(protocol);
                         GossipResponse response = client.gossip(new GossipRequest(states.getInitialDigest()));
 
                         for (Digest digest : response.getDigests()) {
-                            Peer otherPeer = states.getPeers().get(digest.getR());
+                            Peer otherPeer = states.getPeer(digest.getR());
                             log.info("received digest about peer: " + digest.getR());
 
                             Object value = null;
@@ -64,10 +62,10 @@ public class GossipThread extends Thread {
                             otherPeer.getState().merge(digest.getK(), value, digest.getN());
                             states.getSelf().getState().merge(digest.getK(), value, digest.getN());
                         }
-                    } catch (TTransportException ex) {
-                        log.warn("thrift transportation exception while opening socket to: " + address);
+                    } catch (IOException | TTransportException ex) {
+                        log.warn("thrift transportation exception while opening socket to: " + peer.getAddress());
                     } catch (TException ex) {
-                        log.warn("thrift regular exception while gossiping with: " + address);
+                        log.warn("thrift regular exception while gossiping with: " + peer.getAddress());
                     }
                 }
             }

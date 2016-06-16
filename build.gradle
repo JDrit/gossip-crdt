@@ -11,6 +11,7 @@ plugins {
     id 'application'
     id "org.jruyi.thrift" version "0.3.1"
     id "us.kirchmeier.capsule" version "1.0.2"
+    id 'org.hidetake.ssh' version '2.3.0'
 }
 
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
@@ -23,6 +24,8 @@ group 'net.batchik'
 version '1.0-SNAPSHOT'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+idea.module.excludeDirs = []
+idea.module.sourceDirs += file("$projectDir/src/generated/gen-java")
 
 repositories {
     mavenCentral()
@@ -121,7 +124,7 @@ task fatCapsule(type: FatCapsule) {
                 'Application-Class' : mainClassName,
                 'Min-Java-Version' : '1.8.0',
                 'JVM-Args' : run.jvmArgs.join(' '), // copy JVM args from the run task
-                'System-Properties' : run.systemProperties.collect { k,v -> "$k=$v" }.join(' '), // copy system properties
+                'System-Properties' : run.systemProperties.collect { k,v -> "$k=$v" }.join(' '),
                 'Java-Agents' : configurations.quasar.iterator().next().getName()
         )
     }
@@ -137,7 +140,7 @@ task mavenCapsule(type: MavenCapsule) {
                 'Application-Class' : mainClassName,
                 'Min-Java-Version' : '1.8.0',
                 'JVM-Args' : run.jvmArgs.join(' '), // copy JVM args from the run task
-                'System-Properties' : run.systemProperties.collect { k,v -> "$k=$v" }.join(' '), // copy system properties
+                'System-Properties' : run.systemProperties.collect { k,v -> "$k=$v" }.join(' '),
                 'Java-Agents' : getDependencies(configurations.quasar).iterator().next(),
                 'Dependencies': getDependencies(configurations.runtime).join(' ')
         )
@@ -158,5 +161,24 @@ task writeClasspath(dependsOn: build) << {
     }
 }
 
-idea.module.excludeDirs = []
-idea.module.sourceDirs += file("build/generated-src/thrift/main")
+remotes {
+    shell {
+        host = 'shell.csh.rit.edu'
+        user = 'jd'
+        knownHosts = allowAnyHosts
+        agent = true
+        identity = file("${System.getProperty('user.home')}/.ssh/id_rsa")
+    }
+}
+
+def jarName = "build/libs/uvb-server-fat-capsule-1.0-SNAPSHOT-capsule.jar"
+
+task deploy << {
+    println "deploying jar: $jarName"
+    ssh.run {
+        session(remotes.shell) {
+            put from:  jarName,
+                    into: '/users/u20/jd/public_html/uvb.jar'
+        }
+    }
+}

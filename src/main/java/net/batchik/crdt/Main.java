@@ -1,21 +1,20 @@
 package net.batchik.crdt;
 
+import co.paralleluniverse.strands.Strand;
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.MetricRegistry;
 import net.batchik.crdt.fiber.FiberServer;
 import net.batchik.crdt.fiber.HttpRouter;
-import net.batchik.crdt.fiber.StatusRequestHandler;
-import net.batchik.crdt.fiber.UpdateRequestHandler;
+import net.batchik.crdt.fiber.handlers.HealthStatusRequestHandler;
+import net.batchik.crdt.fiber.handlers.PingRequestHandler;
+import net.batchik.crdt.fiber.handlers.StatusRequestHandler;
+import net.batchik.crdt.fiber.handlers.UpdateRequestHandler;
 import net.batchik.crdt.gossip.GossipServer;
 import net.batchik.crdt.gossip.ParticipantStates;
 import net.batchik.crdt.gossip.Peer;
 import net.batchik.crdt.zookeeper.ZKServiceDiscovery;
 import org.apache.commons.cli.*;
-import org.apache.commons.configuration.CompositeConfiguration;
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.commons.configuration.SystemConfiguration;
 import org.apache.curator.x.discovery.*;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import java.net.InetAddress;
@@ -32,8 +31,7 @@ public class Main {
     private static final String VERSION = "0.0.1";
 
     private static final int DEFAULT_GOSSIP_PORT = 5000;
-    private static final int DEFAULT_FIBER_PORT = 6000;
-    private static final String DEFAULT_WEB_ADDRESS = "0.0.0.0:6000";
+    private static final int DEFAULT_FIBER_PORT = 8080;
     private static final int DEFAULT_GOSSIP_TIME = 5000;
     private static final String DEFAULT_SERVICE_NAME = "uvb-server";
 
@@ -50,6 +48,11 @@ public class Main {
                 .hasArg()
                 .desc("the address of the zookeeper instance for configuration")
                 .longOpt("zk")
+                .build());
+        options.addOption(Option.builder()
+                .argName("random ports")
+                .desc("should the gossip and web ports be random")
+                .longOpt("random")
                 .build());
         options.addOption("help", "print information about system and exit");
         options.addOption("version", "print the version information and exit");
@@ -79,23 +82,26 @@ public class Main {
             System.exit(1);
         }
 
-        int min = 4000;
-        int max = 5000;
-        int gossipPort = new Random().nextInt(max - min + 1) + min;
-        int webPort = gossipPort + 1000;
+        int webPort = DEFAULT_FIBER_PORT;
+        int gossipPort = DEFAULT_GOSSIP_PORT;
+
+        if (cmd.hasOption("random")) {
+            int min = 4000;
+            int max = 5000;
+            gossipPort = new Random().nextInt(max - min + 1) + min;
+            webPort = gossipPort + 1000;
+        }
 
         String zk = cmd.getOptionValue("zk");
         InetAddress address = InetAddress.getLocalHost();
         InetSocketAddress gossipAddress = new InetSocketAddress(address, gossipPort);
-        InetSocketAddress webAddress = new InetSocketAddress(address, webPort);
+        InetSocketAddress webAddress = new InetSocketAddress("0.0.0.0", webPort);
         Peer self = new Peer(gossipAddress);
 
         ZKServiceDiscovery zkService = new ZKServiceDiscovery(zk, DEFAULT_SERVICE_NAME);
         zkService.start();
         for (ServiceInstance<String> instance : zkService.getInstances()) {
-            String instanceAddress = instance.getAddress();
-            int instancePort = instance.getPort();
-            InetSocketAddress peerAddress = new InetSocketAddress(instanceAddress, instancePort);
+            InetSocketAddress peerAddress = new InetSocketAddress(instance.getAddress(), instance.getPort());
             log.info("adding peer at address: " + peerAddress);
             peers.add(new Peer(peerAddress));
         }
@@ -115,6 +121,8 @@ public class Main {
         HttpRouter router = HttpRouter.builder()
                 .registerEndpoint("/status", new StatusRequestHandler(self))
                 .registerEndpoint("/update/.*", new UpdateRequestHandler(self))
+                .registerEndpoint("/health", new HealthStatusRequestHandler(states))
+                .registerEndpoint("/ping", new PingRequestHandler())
                 .build();
 
         Service fiberServer = new FiberServer(webAddress, router);
@@ -122,5 +130,7 @@ public class Main {
 
         Service gossipServer = new GossipServer(states, DEFAULT_GOSSIP_TIME);
         gossipServer.start();
+
+        Strand.sleep(Long.MAX_VALUE, TimeUnit.DAYS);
     }
 }

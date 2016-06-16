@@ -1,15 +1,19 @@
 #!/bin/bash 
 
+ZK="54.236.81.90"
+JAR_NAME="uvb.jar"
+
 yum update -y
+yum install java-1.8.0 -y
+yum remove java-1.7.0-openjdk -y
 
 mkdir -p /opt/uvb
 chmod -R 777 /opt/uvb
 cd /opt/uvb
 
-wget http://www.csh.rit.edu/~jd/crdt-all-1.0.jar
+wget "http://www.csh.rit.edu/~jd/$JAR_NAME"
 
-
-echo "exec java -jar /opt/uvb/crdt-all-1.0.jar --zk 174.129.57.252" > /etc/init.d/uvb-server
+echo "exec java -jar /opt/uvb/$JAR_NAME --zk $ZK" > /etc/init.d/uvb-server
 
 chmod 755 /etc/init.d/uvb-server
 

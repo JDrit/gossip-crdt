@@ -1,6 +1,7 @@
 package net.batchik.crdt.fiber;
 
 import co.paralleluniverse.fibers.SuspendExecution;
+import net.batchik.crdt.fiber.handlers.RequestHandler;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.log4j.LogManager;

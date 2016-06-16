@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.SuspendExecution;
 import co.paralleluniverse.fibers.Suspendable;
 import co.paralleluniverse.strands.Strand;
 import co.paralleluniverse.strands.concurrent.ReentrantLock;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -19,6 +21,7 @@ import java.util.concurrent.ExecutionException;
  * Fiber Utility methods for channels and streams.
  */
 public final class FiberChannels {
+    private static Logger log = LogManager.getLogger(FiberChannels.class);
     private static ReentrantLock lock = new ReentrantLock();
 
     private FiberChannels() {}
@@ -39,10 +42,11 @@ public final class FiberChannels {
             try {
                 n = ch.write(bb);
             } catch (IOException e) {
-                e.printStackTrace();
+                log.warn("exception while writing to socket");
+                return;
             }
-            if (n <= 0)
-                throw new RuntimeException("no bytes written");
+            //if (n <= 0)
+            //    throw new RuntimeException("no bytes written");
         }
     }
 

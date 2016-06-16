@@ -30,7 +30,7 @@ public class ParticipantStates implements ZKServiceListener {
 
     Peer getSelf() { return self; }
 
-    Collection<Peer> getPeers() throws SuspendExecution {
+    public Collection<Peer> getPeers() throws SuspendExecution {
         lock.readLock().lock();
         try {
             return peerMap.values();

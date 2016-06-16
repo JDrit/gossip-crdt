@@ -1,4 +1,4 @@
-package net.batchik.crdt.fiber;
+package net.batchik.crdt.fiber.handlers;
 
 import co.paralleluniverse.fibers.SuspendExecution;
 import org.apache.http.HttpRequest;

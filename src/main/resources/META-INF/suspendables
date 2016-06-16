@@ -30,7 +30,7 @@ net.batchik.crdt.fiber.FiberChannels$ReadableByteChannelImpl.implCloseChannel()V
 net.batchik.crdt.fiber.FiberChannels$ReadableByteChannelImpl.read(Ljava/nio/ByteBuffer;)I
 net.batchik.crdt.fiber.FiberChannels$WritableByteChannelImpl.implCloseChannel()V
 net.batchik.crdt.fiber.FiberChannels$WritableByteChannelImpl.write(Ljava/nio/ByteBuffer;)I
-net.batchik.crdt.fiber.StatusRequestHandler.handleGet(Lorg/apache/http/HttpRequest;Ljava/net/InetSocketAddress;)Lorg/apache/http/HttpResponse;
+net.batchik.crdt.fiber.handlers.StatusRequestHandler.handleGet(Lorg/apache/http/HttpRequest;Ljava/net/InetSocketAddress;)Lorg/apache/http/HttpResponse;
 net.batchik.crdt.gossip.Digest$DigestStandardScheme.read(Lorg/apache/thrift/protocol/TProtocol;Lnet/batchik/crdt/gossip/Digest;)V
 net.batchik.crdt.gossip.Digest$DigestStandardScheme.read(Lorg/apache/thrift/protocol/TProtocol;Lorg/apache/thrift/TBase;)V
 net.batchik.crdt.gossip.Digest$DigestStandardScheme.write(Lorg/apache/thrift/protocol/TProtocol;Lnet/batchik/crdt/gossip/Digest;)V
@@ -134,3 +134,4 @@ org.apache.http.impl.io.SessionOutputBufferImpl.write([B)V
 org.apache.http.impl.io.SessionOutputBufferImpl.write([BII)V
 org.apache.http.impl.io.SessionOutputBufferImpl.writeEncoded(Ljava/nio/CharBuffer;)V
 org.apache.http.impl.io.DefaultHttpRequestParser.parseHead(Lorg/apache/http/io/SessionInputBuffer;)Lorg/apache/http/HttpRequest;
+net.batchik.crdt.fiber.handlers.StringReporter.printPeer(Lnet/batchik/crdt/gossip/Peer;Ljava/util/Formatter;)V

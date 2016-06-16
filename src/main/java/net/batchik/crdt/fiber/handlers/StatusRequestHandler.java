@@ -1,10 +1,10 @@
-package net.batchik.crdt.fiber;
+package net.batchik.crdt.fiber.handlers;
 
+import net.batchik.crdt.fiber.Response;
 import net.batchik.crdt.gossip.Peer;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 
 public class StatusRequestHandler implements RequestHandler {

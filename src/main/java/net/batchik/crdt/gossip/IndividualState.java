@@ -26,7 +26,7 @@ public class IndividualState {
         lock = new ReentrantReadWriteLock(true);
     }
 
-    long getMaxVersion() {
+    public long getMaxVersion() {
         lock.readLock().lock();
         try {
             return maxVersion;

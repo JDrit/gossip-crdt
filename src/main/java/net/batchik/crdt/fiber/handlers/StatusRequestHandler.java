@@ -7,7 +7,10 @@ import org.apache.http.HttpResponse;
 
 import java.net.InetSocketAddress;
 
-public class StatusRequestHandler implements RequestHandler {
+/**
+ * Displays the counter for every value known on this local host
+ */
+public class StatusRequestHandler extends RequestHandler {
     private final Peer self;
 
     public StatusRequestHandler(Peer self) {
@@ -16,6 +19,7 @@ public class StatusRequestHandler implements RequestHandler {
 
     @Override
     public HttpResponse handleGet(HttpRequest req, InetSocketAddress address) {
+        log.info("getting status");
         return Response.ok(self.getState().getAllResponse().getBytes());
     }
 }

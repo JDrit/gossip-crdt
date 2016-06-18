@@ -13,7 +13,7 @@ import java.net.InetSocketAddress;
 /**
  * Basic Ping test used for the load balancer. Just to check if the server is up.
  */
-public class PingRequestHandler implements RequestHandler {
+public class PingRequestHandler extends RequestHandler {
     private static final HttpResponse response = new BasicHttpResponse(Response.VERSION, HttpStatus.SC_OK, "OK");
 
     static {

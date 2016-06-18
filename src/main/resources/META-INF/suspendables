@@ -121,10 +121,6 @@ net.batchik.crdt.gossip.ParticipantStates.getDeltaScuttle(Ljava/util/Map;)Ljava/
 net.batchik.crdt.gossip.ParticipantStates.getInitialDigest()Ljava/util/Map;
 net.batchik.crdt.gossip.ParticipantStates.getPeer(Ljava/lang/String;)Lnet/batchik/crdt/gossip/Peer;
 net.batchik.crdt.gossip.ParticipantStates.newPeer(Ljava/lang/String;)V
-net.batchik.crdt.web.StatusRequestHandler.handle(Ljava/lang/Object;Lorg/apache/http/nio/protocol/HttpAsyncExchange;Lorg/apache/http/protocol/HttpContext;)V
-net.batchik.crdt.web.StatusRequestHandler.handle(Lorg/apache/http/HttpRequest;Lorg/apache/http/nio/protocol/HttpAsyncExchange;Lorg/apache/http/protocol/HttpContext;)V
-net.batchik.crdt.web.UpdateRequestHandler.handle(Ljava/lang/Object;Lorg/apache/http/nio/protocol/HttpAsyncExchange;Lorg/apache/http/protocol/HttpContext;)V
-net.batchik.crdt.web.UpdateRequestHandler.handle(Lorg/apache/http/HttpRequest;Lorg/apache/http/nio/protocol/HttpAsyncExchange;Lorg/apache/http/protocol/HttpContext;)V
 net.batchik.crdt.zookeeper.ZKServiceDiscovery$2.cacheChanged()V
 org.apache.http.impl.io.ContentLengthInputStream.close()V
 org.apache.http.impl.io.ContentLengthInputStream.skip(J)J
@@ -134,4 +130,4 @@ org.apache.http.impl.io.SessionOutputBufferImpl.write([B)V
 org.apache.http.impl.io.SessionOutputBufferImpl.write([BII)V
 org.apache.http.impl.io.SessionOutputBufferImpl.writeEncoded(Ljava/nio/CharBuffer;)V
 org.apache.http.impl.io.DefaultHttpRequestParser.parseHead(Lorg/apache/http/io/SessionInputBuffer;)Lorg/apache/http/HttpRequest;
-net.batchik.crdt.fiber.handlers.StringReporter.printPeer(Lnet/batchik/crdt/gossip/Peer;Ljava/util/Formatter;)V
+net.batchik.crdt.fiber.StringReporter.printPeer(Lnet/batchik/crdt/gossip/Peer;Ljava/util/Formatter;)V

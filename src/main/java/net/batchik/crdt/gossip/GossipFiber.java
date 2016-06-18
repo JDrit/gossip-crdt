@@ -2,8 +2,9 @@ package net.batchik.crdt.gossip;
 
 import co.paralleluniverse.fibers.Fiber;
 import co.paralleluniverse.fibers.SuspendExecution;
-import co.paralleluniverse.fibers.Suspendable;
+import com.codahale.metrics.Meter;
 import com.pinterest.quasar.thrift.TFiberSocket;
+import net.batchik.crdt.Main;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -12,16 +13,22 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.*;
 
 import java.io.IOException;
-import java.util.Map;
 
-class GossipThread extends Fiber<Void> {
-    private static Logger log = Logger.getLogger(GossipThread.class.getName());
+/**
+ * Background fiber that talks to every other peer in the system and updates the local stated
+ * based off of what other peers know
+ */
+class GossipFiber extends Fiber<Void> {
+    private static Logger log = Logger.getLogger(GossipFiber.class.getName());
     private ParticipantStates states;
     private int sleepTime;
 
-    GossipThread(ParticipantStates states, int sleepTime) {
+    private final Meter digestMeter;
+
+    GossipFiber(ParticipantStates states, int sleepTime) {
         this.states = states;
         this.sleepTime = sleepTime;
+        digestMeter = Main.metrics.meter("digests count");
     }
 
     @Override
@@ -44,7 +51,7 @@ class GossipThread extends Fiber<Void> {
                         TProtocol protocol = new TBinaryProtocol(tran);
                         GossipService.Client client = new GossipService.Client(protocol);
                         GossipResponse response = client.gossip(new GossipRequest(states.getInitialDigest()));
-
+                        digestMeter.mark(response.getDigestsSize());
                         for (Digest digest : response.getDigests()) {
                             Peer otherPeer = states.getPeer(digest.getR());
                             log.info("received digest about peer: " + digest.getR());

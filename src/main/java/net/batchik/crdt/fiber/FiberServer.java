@@ -27,6 +27,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+/**
+ * Main server code implemented using Fibers. Single Fiber that accepts connections and then
+ * hands it off to a new fiber for processing.
+ */
 public class FiberServer extends Service {
     private static Logger log = LogManager.getLogger(FiberServer.class);
 
@@ -42,8 +46,7 @@ public class FiberServer extends Service {
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
 
-    private final Timer responseTime = Main.metrics.timer(name(RequestHandler.class, "fiber-response-time"));
-
+    private final Timer responseTime = Main.metrics.timer("fiber response time"); //name(RequestHandler.class, "fiber-response-time"));
 
     public FiberServer(InetSocketAddress address, HttpRouter router) {
         fiberScheduler = new FiberForkJoinScheduler("web-scheduler", parallelism);
@@ -52,7 +55,7 @@ public class FiberServer extends Service {
 
     }
 
-
+    @Override
     public void start() throws Exception {
         if (!initialized.compareAndSet(false, true)) {
             log.error("fiber server has already been initialized");
@@ -135,10 +138,10 @@ public class FiberServer extends Service {
             }*/
             /* We can wrap this in a fiber if we feel we can be more async */
             HttpResponse rawResponse = router.route(rawRequest, address, contentStream);
-            //HttpResponse rawResponse = Response.OK;
 
             DefaultHttpResponseWriter msgWriter = new DefaultHttpResponseWriter(sessionOutputBuffer);
             msgWriter.write(rawResponse);
+
             sessionOutputBuffer.flush(); // flushes the header
 
             if (rawResponse.getEntity() != null) {

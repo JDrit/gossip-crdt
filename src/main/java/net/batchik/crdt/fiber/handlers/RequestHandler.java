@@ -3,6 +3,8 @@ package net.batchik.crdt.fiber.handlers;
 import co.paralleluniverse.fibers.SuspendExecution;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import javax.xml.ws.Response;
 import java.io.InputStream;
@@ -10,22 +12,24 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 
 /**
- * Interface to the different supported HTTP methods
+ * base class to handle all type of requests for the given handler
  */
-public interface RequestHandler {
-    default HttpResponse handleGet(HttpRequest req, InetSocketAddress address) throws SuspendExecution {
+public abstract class RequestHandler {
+    protected Logger log = LogManager.getLogger(this.getClass().getName());
+
+    public HttpResponse handleGet(HttpRequest req, InetSocketAddress address) throws SuspendExecution {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 
-    default HttpResponse handlePost(HttpRequest req, InetSocketAddress address, InputStream payload) {
+    public HttpResponse handlePost(HttpRequest req, InetSocketAddress address, InputStream payload) {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 
-    default HttpResponse handleDelete(HttpRequest req, InetSocketAddress address) {
+    public HttpResponse handleDelete(HttpRequest req, InetSocketAddress address) {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 
-    default HttpResponse handlePut(HttpRequest req, InetSocketAddress address) {
+    public HttpResponse handlePut(HttpRequest req, InetSocketAddress address) {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 }

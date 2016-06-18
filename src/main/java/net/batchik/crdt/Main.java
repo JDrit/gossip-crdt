@@ -5,10 +5,7 @@ import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.MetricRegistry;
 import net.batchik.crdt.fiber.FiberServer;
 import net.batchik.crdt.fiber.HttpRouter;
-import net.batchik.crdt.fiber.handlers.HealthStatusRequestHandler;
-import net.batchik.crdt.fiber.handlers.PingRequestHandler;
-import net.batchik.crdt.fiber.handlers.StatusRequestHandler;
-import net.batchik.crdt.fiber.handlers.UpdateRequestHandler;
+import net.batchik.crdt.fiber.handlers.*;
 import net.batchik.crdt.gossip.GossipServer;
 import net.batchik.crdt.gossip.ParticipantStates;
 import net.batchik.crdt.gossip.Peer;
@@ -28,7 +25,7 @@ public class Main {
     private static final Options options = new Options();
     private static final HelpFormatter formatter = new HelpFormatter();
     private static final CommandLineParser parser = new DefaultParser();
-    private static final String VERSION = "0.0.1";
+    private static final String VERSION = "1.0.0";
 
     private static final int DEFAULT_GOSSIP_PORT = 5000;
     private static final int DEFAULT_FIBER_PORT = 8080;
@@ -44,19 +41,23 @@ public class Main {
 
     static {
         options.addOption(Option.builder()
-                .argName("zookeeper")
+                .argName("zookeeper address")
                 .hasArg()
                 .desc("the address of the zookeeper instance for configuration")
                 .longOpt("zk")
                 .build());
         options.addOption(Option.builder()
-                .argName("random ports")
                 .desc("should the gossip and web ports be random")
                 .longOpt("random")
                 .build());
-        options.addOption("help", "print information about system and exit");
-        options.addOption("version", "print the version information and exit");
-
+        options.addOption(Option.builder()
+                .desc("print information about the system configuration options, and exit")
+                .longOpt("help")
+                .build());
+        options.addOption(Option.builder()
+                .desc("print the version information and exit")
+                .longOpt("version")
+                .build());
     }
 
     public static InetSocketAddress convertAddress(String address) {
@@ -119,10 +120,10 @@ public class Main {
         //reporter.start(3, TimeUnit.SECONDS);
 
         HttpRouter router = HttpRouter.builder()
-                .registerEndpoint("/status", new StatusRequestHandler(self))
-                .registerEndpoint("/update/.*", new UpdateRequestHandler(self))
-                .registerEndpoint("/health", new HealthStatusRequestHandler(states))
-                .registerEndpoint("/ping", new PingRequestHandler())
+                .registerEndpoint("/status", HttpMethod.GET, new StatusRequestHandler(self))
+                .registerEndpoint("/update/.*", HttpMethod.GET, new UpdateRequestHandler(self))
+                .registerEndpoint("/health", HttpMethod.GET, new HealthStatusRequestHandler(states))
+                .registerEndpoint("/ping", HttpMethod.GET, new PingRequestHandler())
                 .build();
 
         Service fiberServer = new FiberServer(webAddress, router);

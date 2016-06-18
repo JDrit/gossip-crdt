@@ -1,4 +1,4 @@
-package net.batchik.crdt.fiber.handlers;
+package net.batchik.crdt.fiber;
 
 import co.paralleluniverse.fibers.SuspendExecution;
 import com.codahale.metrics.*;
@@ -52,8 +52,8 @@ public class StringReporter implements Reporter {
             for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
                 output.append(entry.getKey()).append("\n");
                 printGauge(entry, fm);
+                output.append("\n");
             }
-            output.append("\n");
         }
 
         if (!counters.isEmpty()) {
@@ -61,8 +61,8 @@ public class StringReporter implements Reporter {
             for (Map.Entry<String, Counter> entry : counters.entrySet()) {
                 output.append(entry.getKey()).append("\n");
                 printCounter(entry, fm);
+                output.append("\n");
             }
-            output.append("\n");
         }
 
         if (!histograms.isEmpty()) {
@@ -70,8 +70,8 @@ public class StringReporter implements Reporter {
             for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {
                 output.append(entry.getKey()).append("\n");
                 printHistogram(entry.getValue(), fm);
+                output.append("\n");
             }
-            output.append("\n");
         }
 
         if (!meters.isEmpty()) {
@@ -79,8 +79,8 @@ public class StringReporter implements Reporter {
             for (Map.Entry<String, Meter> entry : meters.entrySet()) {
                 output.append(entry.getKey()).append("\n");
                 printMeter(entry.getValue(), fm);
+                output.append("\n");
             }
-            output.append("\n");
         }
 
         if (!timers.isEmpty()) {
@@ -88,8 +88,8 @@ public class StringReporter implements Reporter {
             for (Map.Entry<String, Timer> entry : timers.entrySet()) {
                 output.append(entry.getKey()).append("\n");
                 printTimer(entry.getValue(), fm);
+                output.append("\n");
             }
-            output.append("\n");
         }
 
         printWithBanner("-- Peers", '-', output);

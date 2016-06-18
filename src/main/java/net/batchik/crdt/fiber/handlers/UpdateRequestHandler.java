@@ -12,11 +12,8 @@ import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
 
-public class UpdateRequestHandler implements RequestHandler {
-    private static final Logger log = LogManager.getLogger(UpdateRequestHandler.class);
+public class UpdateRequestHandler extends RequestHandler {
     private final Peer self;
-
-    private final Meter requests = Main.metrics.meter("update requests/sec");
 
     public UpdateRequestHandler(Peer self) {
         this.self = self;
@@ -27,7 +24,6 @@ public class UpdateRequestHandler implements RequestHandler {
         String uri = req.getRequestLine().getUri();
         if (uri.length() > 8) {
             String name = uri.substring(8);
-            requests.mark();
             self.getState().incrementCounter(name);
             return Response.OK;
         } else {

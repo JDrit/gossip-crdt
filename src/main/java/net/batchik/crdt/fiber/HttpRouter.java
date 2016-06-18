@@ -1,6 +1,9 @@
 package net.batchik.crdt.fiber;
 
 import co.paralleluniverse.fibers.SuspendExecution;
+import com.codahale.metrics.Meter;
+import net.batchik.crdt.Main;
+import net.batchik.crdt.fiber.handlers.HttpMethod;
 import net.batchik.crdt.fiber.handlers.RequestHandler;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
@@ -42,19 +45,31 @@ public class HttpRouter {
             final URI uri = new URI(request.getRequestLine().getUri());
             final String path = uri.getPath();
             final String query = uri.getQuery();
-            final String method = request.getRequestLine().getMethod();
+            final HttpMethod method = HttpMethod.valueOf(request.getRequestLine().getMethod());
 
             for (EndPointEntry entry : endPointEntries) {
-                if (entry.getPattern().matcher(path).matches()) {
-                    return entry.getHandler().handleGet(request, address);
+                if (entry.getMethod().equals(method) && entry.getPattern().matcher(path).matches()) {
+                    switch (method) {
+                        case GET:
+                            return entry.getHandler().handleGet(request, address);
+                        case PUT:
+                            return entry.getHandler().handlePut(request, address);
+                        case DELETE:
+                            return entry.getHandler().handleDelete(request, address);
+                        case POST:
+                            return entry.getHandler().handlePost(request, address, payload);
+                    }
                 }
             }
             log.debug("no handler found for path: " + path);
         } catch (URISyntaxException ex) {
             log.error("uri syntax error", ex);
+            return Response.BAD_REQUEST;
+        } catch (NullPointerException | IllegalArgumentException ex) {
+            log.error("could not determine method type", ex);
+            return Response.BAD_REQUEST;
         }
         return notFoundHandler.handleGet(request, address);
-
     }
 
     public static HttpRouterBuilder builder() {
@@ -64,15 +79,24 @@ public class HttpRouter {
     private static class EndPointEntry {
         private final Pattern pattern;
         private final RequestHandler handler;
+        private final HttpMethod method;
+        private final Meter meter;
 
-        public EndPointEntry(String regex, RequestHandler handler) {
+        EndPointEntry(String regex, HttpMethod method, RequestHandler handler) {
+            this.meter = Main.metrics.meter(regex + " requests");
             this.pattern = Pattern.compile(regex);
+            this.method = method;
             this.handler = handler;
         }
 
-        public Pattern getPattern() { return pattern; }
+        HttpMethod getMethod() { return method; }
 
-        public RequestHandler getHandler() { return handler; }
+        Pattern getPattern() { return pattern; }
+
+        RequestHandler getHandler() {
+            meter.mark();
+            return handler;
+        }
     }
 
     /**
@@ -85,8 +109,8 @@ public class HttpRouter {
             this.endpoints = new ArrayList<>();
         }
 
-        public HttpRouterBuilder registerEndpoint(String regex, RequestHandler handler) {
-            endpoints.add(new EndPointEntry(regex, handler));
+        public HttpRouterBuilder registerEndpoint(String regex, HttpMethod method, RequestHandler handler) {
+            endpoints.add(new EndPointEntry(regex, method, handler));
             return this;
         }
 

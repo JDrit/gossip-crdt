@@ -1,13 +1,12 @@
 package net.batchik.crdt.fiber;
 
 
-import co.paralleluniverse.fibers.Fiber;
-import co.paralleluniverse.fibers.FiberForkJoinScheduler;
-import co.paralleluniverse.fibers.FiberScheduler;
-import co.paralleluniverse.fibers.SuspendExecution;
+import co.paralleluniverse.common.monitoring.MonitorType;
+import co.paralleluniverse.fibers.*;
 import co.paralleluniverse.fibers.io.FiberServerSocketChannel;
 import co.paralleluniverse.fibers.io.FiberSocketChannel;
 import co.paralleluniverse.strands.SuspendableCallable;
+import co.paralleluniverse.strands.SuspendableRunnable;
 import com.codahale.metrics.Timer;
 import net.batchik.crdt.Main;
 import net.batchik.crdt.Service;
@@ -46,13 +45,12 @@ public class FiberServer extends Service {
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
 
-    private final Timer responseTime = Main.metrics.timer("fiber response time"); //name(RequestHandler.class, "fiber-response-time"));
+    private final Timer responseTime = Main.metrics.timer("fiber response time");
 
     public FiberServer(InetSocketAddress address, HttpRouter router) {
-        fiberScheduler = new FiberForkJoinScheduler("web-scheduler", parallelism);
+        fiberScheduler = new FiberForkJoinScheduler("web-scheduler", parallelism, MonitorType.METRICS, false);
         this.address = address;
         this.router = router;
-
     }
 
     @Override
@@ -66,9 +64,9 @@ public class FiberServer extends Service {
             throw new Exception("server has already been shut down");
         }
 
-        Fiber<Void> bindFiber = new Fiber<>(fiberScheduler, new SuspendableCallable<Void>() {
+        new Fiber<>(fiberScheduler, new SuspendableRunnable() {
             @Override
-            public Void run() throws SuspendExecution, InterruptedException {
+            public void run() throws SuspendExecution, InterruptedException {
                 try {
                     serverChannel = FiberServerSocketChannel.open(null).bind(address);
 
@@ -80,11 +78,10 @@ public class FiberServer extends Service {
                         final FiberSocketChannel ch = serverChannel.accept();
                         final InetSocketAddress remoteAddress = (InetSocketAddress) ch.getRemoteAddress();
 
-                        new Fiber<>(fiberScheduler, new SuspendableCallable<Void>() {
+                        new Fiber<>(fiberScheduler, new SuspendableRunnable() {
                             @Override
-                            public Void run() throws SuspendExecution, InterruptedException {
+                            public void run() throws SuspendExecution, InterruptedException {
                                 fiberServerRoutine(remoteAddress, ch);
-                                return null;
                             }
                         }).start();
                     }
@@ -94,10 +91,8 @@ public class FiberServer extends Service {
                     log.error("io exception while opening socket", ex);
                     shutdown.set(true);
                 }
-                return null;
             }
-        });
-        bindFiber.start();
+        }).start();
     }
 
     /**

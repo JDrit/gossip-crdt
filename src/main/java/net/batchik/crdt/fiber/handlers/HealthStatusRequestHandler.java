@@ -1,7 +1,9 @@
 package net.batchik.crdt.fiber.handlers;
 
 
+import co.paralleluniverse.common.monitoring.Metrics;
 import co.paralleluniverse.fibers.SuspendExecution;
+import com.codahale.metrics.MetricRegistry;
 import net.batchik.crdt.Main;
 import net.batchik.crdt.fiber.Response;
 import net.batchik.crdt.fiber.StringReporter;
@@ -22,7 +24,7 @@ public class HealthStatusRequestHandler extends RequestHandler {
     private final StringReporter reporter;
 
     public HealthStatusRequestHandler(ParticipantStates states) {
-        this.reporter = new StringReporter(Main.metrics, states);
+        this.reporter = new StringReporter(new MetricRegistry[]{Main.metrics, Metrics.registry()}, states);
     }
 
     @Override

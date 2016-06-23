@@ -34,11 +34,6 @@ public class Main {
 
     public static final MetricRegistry metrics = new MetricRegistry();
 
-    private static final ConsoleReporter reporter = ConsoleReporter.forRegistry(Main.metrics)
-            .convertRatesTo(TimeUnit.SECONDS)
-            .convertDurationsTo(TimeUnit.MILLISECONDS)
-            .build();
-
     static {
         options.addOption(Option.builder()
                 .argName("zookeeper address")
@@ -70,7 +65,7 @@ public class Main {
         ArrayList<Peer> peers = new ArrayList<>();
 
         if (cmd.hasOption("help")) {
-            formatter.printHelp("gossip-crdt", "Overview of argument flags", options,
+            formatter.printHelp("uvb-server", "Overview of argument flags", options,
                     "**just remember this is a pre-alpha personal project**", true);
             System.exit(0);
         }
@@ -116,8 +111,6 @@ public class Main {
         log.info("starting peer with " + peers.size() + " other peer(s)");
         log.info("gossipping on: " + gossipAddress);
         log.info("web requests on: " + webAddress);
-
-        //reporter.start(3, TimeUnit.SECONDS);
 
         HttpRouter router = HttpRouter.builder()
                 .registerEndpoint("/status", HttpMethod.GET, new StatusRequestHandler(self))

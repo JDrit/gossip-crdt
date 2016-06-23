@@ -62,6 +62,7 @@ public class HttpRouter {
                 }
             }
             log.debug("no handler found for path: " + path);
+            return notFoundHandler.handleGet(request, address);
         } catch (URISyntaxException ex) {
             log.error("uri syntax error", ex);
             return Response.BAD_REQUEST;
@@ -69,7 +70,6 @@ public class HttpRouter {
             log.error("could not determine method type", ex);
             return Response.BAD_REQUEST;
         }
-        return notFoundHandler.handleGet(request, address);
     }
 
     public static HttpRouterBuilder builder() {
@@ -105,7 +105,7 @@ public class HttpRouter {
     public static class HttpRouterBuilder {
         ArrayList<EndPointEntry> endpoints;
 
-        public HttpRouterBuilder() {
+        HttpRouterBuilder() {
             this.endpoints = new ArrayList<>();
         }
 

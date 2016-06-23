@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
  * This report is generated using a StringBuilder
  */
 public class StringReporter implements Reporter {
-    private final MetricRegistry metricRegistry;
+    private final MetricRegistry[] registries;
     private final ParticipantStates states;
 
     private final Locale locale = Locale.getDefault();
@@ -28,19 +28,26 @@ public class StringReporter implements Reporter {
     private final TimeUnit durationUnit = TimeUnit.MILLISECONDS;
     private final double durationFactor = 1.0 / durationUnit.toNanos(1);
 
-
-    public StringReporter(MetricRegistry metricRegistry, ParticipantStates states) {
-        this.metricRegistry = metricRegistry;
+    public StringReporter(MetricRegistry[] registries, ParticipantStates states) {
+        this.registries = registries;
         this.states = states;
 
     }
 
     public void report(StringBuilder output) throws SuspendExecution {
-        SortedMap<String, Gauge> gauges = metricRegistry.getGauges();
-        SortedMap<String, Counter> counters = metricRegistry.getCounters();
-        SortedMap<String, Histogram> histograms = metricRegistry.getHistograms();
-        SortedMap<String, Meter> meters = metricRegistry.getMeters();
-        SortedMap<String, Timer> timers = metricRegistry.getTimers();
+        SortedMap<String, Gauge> gauges = new TreeMap<>();
+        SortedMap<String, Counter> counters = new TreeMap<>();
+        SortedMap<String, Histogram> histograms = new TreeMap<>();
+        SortedMap<String, Meter> meters = new TreeMap<>();
+        SortedMap<String, Timer> timers = new TreeMap<>();
+
+        for (MetricRegistry registry : registries) {
+            gauges.putAll(registry.getGauges());
+            counters.putAll(registry.getCounters());
+            histograms.putAll(registry.getHistograms());
+            meters.putAll(registry.getMeters());
+            timers.putAll(registry.getTimers());
+        }
 
         final String dateTime = dateFormat.format(new Date(clock.getTime()));
         Formatter fm = new Formatter(output);
@@ -50,9 +57,11 @@ public class StringReporter implements Reporter {
         if (!gauges.isEmpty()) {
             printWithBanner("-- Gauges", '-', output);
             for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
-                output.append(entry.getKey()).append("\n");
-                printGauge(entry, fm);
-                output.append("\n");
+                if (!entry.getKey().equals("runawayFibers")) {
+                    output.append(entry.getKey()).append("\n");
+                    printGauge(entry, fm);
+                    output.append("\n");
+                }
             }
         }
 

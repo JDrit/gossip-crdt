@@ -102,21 +102,17 @@ public class FiberChannelInputStream extends InputStream {
     }
 
     @Suspendable
-    public int read(byte[] bs, int off, int len)
-            throws IOException
-    {
+    public int read(byte[] bs, int off, int len) throws IOException {
         try {
             lock.lock();
 
-            if ((off < 0) || (off > bs.length) || (len < 0) ||
-                    ((off + len) > bs.length) || ((off + len) < 0)) {
+            if ((off < 0) || (off > bs.length) || (len < 0) || ((off + len) > bs.length) || ((off + len) < 0)) {
                 throw new IndexOutOfBoundsException();
-            } else if (len == 0)
+            } else if (len == 0) {
                 return 0;
+            }
 
-            ByteBuffer bb = ((this.bs == bs)
-                    ? this.bb
-                    : ByteBuffer.wrap(bs));
+            ByteBuffer bb = ((this.bs == bs) ? this.bb : ByteBuffer.wrap(bs));
             bb.limit(Math.min(off + len, bb.capacity()));
             bb.position(off);
             this.bb = bb;
@@ -133,9 +129,7 @@ public class FiberChannelInputStream extends InputStream {
     }
 
     @Suspendable
-    protected int read(ByteBuffer bb)
-            throws IOException, SuspendExecution
-    {
+    protected int read(ByteBuffer bb) throws IOException, SuspendExecution {
         return FiberChannelInputStream.read(ch, bb, true);
     }
 

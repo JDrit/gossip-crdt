@@ -65,7 +65,6 @@ public final class FiberChannels {
                 if (!sc.isBlocking()) {
                     throw new IllegalBlockingModeException();
                 }
-
                 writeFullyImpl(ch, bb);
             } else {
                 writeFullyImpl(ch, bb);

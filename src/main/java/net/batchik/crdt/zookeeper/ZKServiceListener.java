@@ -1,6 +1,8 @@
 package net.batchik.crdt.zookeeper;
 
 
+import co.paralleluniverse.fibers.SuspendExecution;
+
 /**
  * This is used to enable listening to nodes being added to the zookeeper service.
  */

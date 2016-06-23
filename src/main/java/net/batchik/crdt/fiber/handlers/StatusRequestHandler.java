@@ -1,5 +1,6 @@
 package net.batchik.crdt.fiber.handlers;
 
+import co.paralleluniverse.fibers.SuspendExecution;
 import net.batchik.crdt.fiber.Response;
 import net.batchik.crdt.gossip.Peer;
 import org.apache.http.HttpRequest;
@@ -18,8 +19,7 @@ public class StatusRequestHandler extends RequestHandler {
     }
 
     @Override
-    public HttpResponse handleGet(HttpRequest req, InetSocketAddress address) {
-        log.info("getting status");
+    public HttpResponse handleGet(InetSocketAddress address, String uri) throws SuspendExecution {
         return Response.ok(self.getState().getAllResponse().getBytes());
     }
 }

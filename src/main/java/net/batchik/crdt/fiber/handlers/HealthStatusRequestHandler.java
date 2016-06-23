@@ -28,7 +28,7 @@ public class HealthStatusRequestHandler extends RequestHandler {
     }
 
     @Override
-    public HttpResponse handleGet(HttpRequest req, InetSocketAddress address) throws SuspendExecution {
+    public HttpResponse handleGet(InetSocketAddress address, String uri) throws SuspendExecution {
         StringBuilder builder = new StringBuilder();
         reporter.report(builder);
         return Response.ok(builder.toString());

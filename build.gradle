@@ -123,7 +123,8 @@ task fatCapsule(type: FatCapsule) {
                 'Main-Class'  : 'Capsule',
                 'Application-Class' : mainClassName,
                 'Min-Java-Version' : '1.8.0',
-                'JVM-Args' : run.jvmArgs.join(' '), // copy JVM args from the run task
+                'JVM-Args' : '-server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC',
+                //'JVM-Args' : run.jvmArgs.join(' '), // copy JVM args from the run task
                 'System-Properties' : run.systemProperties.collect { k,v -> "$k=$v" }.join(' '),
                 'Java-Agents' : configurations.quasar.iterator().next().getName()
         )
@@ -139,7 +140,8 @@ task mavenCapsule(type: MavenCapsule) {
                 'Main-Class'  : 'Capsule',
                 'Application-Class' : mainClassName,
                 'Min-Java-Version' : '1.8.0',
-                'JVM-Args' : run.jvmArgs.join(' '), // copy JVM args from the run task
+                'JVM-Args' : '-server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC',
+                //run.jvmArgs.join(' '), // copy JVM args from the run task
                 'System-Properties' : run.systemProperties.collect { k,v -> "$k=$v" }.join(' '),
                 'Java-Agents' : getDependencies(configurations.quasar).iterator().next(),
                 'Dependencies': getDependencies(configurations.runtime).join(' ')

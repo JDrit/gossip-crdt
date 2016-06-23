@@ -131,3 +131,4 @@ org.apache.http.impl.io.SessionOutputBufferImpl.write([BII)V
 org.apache.http.impl.io.SessionOutputBufferImpl.writeEncoded(Ljava/nio/CharBuffer;)V
 org.apache.http.impl.io.DefaultHttpRequestParser.parseHead(Lorg/apache/http/io/SessionInputBuffer;)Lorg/apache/http/HttpRequest;
 net.batchik.crdt.fiber.StringReporter.printPeer(Lnet/batchik/crdt/gossip/Peer;Ljava/util/Formatter;)V
+net.batchik.crdt.fiber.handlers.StatusRequestHandler.handleGet(Ljava/net/InetSocketAddress;Ljava/lang/String;)Lorg/apache/http/HttpResponse;

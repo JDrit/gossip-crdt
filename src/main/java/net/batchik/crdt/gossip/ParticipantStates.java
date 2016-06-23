@@ -1,6 +1,7 @@
 package net.batchik.crdt.gossip;
 
 import co.paralleluniverse.fibers.SuspendExecution;
+import co.paralleluniverse.fibers.Suspendable;
 import co.paralleluniverse.strands.concurrent.ReentrantReadWriteLock;
 import net.batchik.crdt.Main;
 import net.batchik.crdt.zookeeper.ZKServiceListener;
@@ -39,7 +40,7 @@ public class ParticipantStates implements ZKServiceListener {
         }
     }
 
-    Peer getPeer(String key) {
+    Peer getPeer(String key) throws SuspendExecution {
         lock.readLock().lock();
         try {
             return peerMap.get(key);
@@ -54,6 +55,7 @@ public class ParticipantStates implements ZKServiceListener {
      * to check for this
      * @param address the address of the new location
      */
+    @Suspendable
     public void newPeer(String address) {
         lock.writeLock().lock();
         try {
@@ -72,7 +74,7 @@ public class ParticipantStates implements ZKServiceListener {
      * Generates the initial digest of the states that this node knows about
      * @return HashMap representing the digest
      */
-    Map<String, Long> getInitialDigest() {
+    Map<String, Long> getInitialDigest() throws SuspendExecution {
         lock.readLock().lock();
         try {
             HashMap<String, Long> digest = new HashMap<>(peerMap.size());

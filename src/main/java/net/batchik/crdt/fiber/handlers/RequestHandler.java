@@ -17,19 +17,19 @@ import java.util.HashMap;
 public abstract class RequestHandler {
     protected Logger log = LogManager.getLogger(this.getClass().getName());
 
-    public HttpResponse handleGet(HttpRequest req, InetSocketAddress address) throws SuspendExecution {
+    public HttpResponse handleGet(InetSocketAddress address, String uri) throws SuspendExecution {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 
-    public HttpResponse handlePost(HttpRequest req, InetSocketAddress address, InputStream payload) {
+    public HttpResponse handlePost(InetSocketAddress address, String uri) throws SuspendExecution {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 
-    public HttpResponse handleDelete(HttpRequest req, InetSocketAddress address) {
+    public HttpResponse handleDelete(InetSocketAddress address, String uri) throws SuspendExecution {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 
-    public HttpResponse handlePut(HttpRequest req, InetSocketAddress address) {
+    public HttpResponse handlePut(InetSocketAddress address, String uri) throws SuspendExecution {
         return net.batchik.crdt.fiber.Response.BAD_REQUEST;
     }
 }

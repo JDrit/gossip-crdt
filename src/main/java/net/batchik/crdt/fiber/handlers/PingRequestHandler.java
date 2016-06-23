@@ -21,7 +21,7 @@ public class PingRequestHandler extends RequestHandler {
     }
 
     @Override
-    public HttpResponse handleGet(HttpRequest req, InetSocketAddress address) throws SuspendExecution {
+    public HttpResponse handleGet(InetSocketAddress address, String uri) throws SuspendExecution {
         return response;
     }
 }

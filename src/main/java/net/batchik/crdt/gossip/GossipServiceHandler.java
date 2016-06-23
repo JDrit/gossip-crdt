@@ -1,5 +1,7 @@
 package net.batchik.crdt.gossip;
 
+import co.paralleluniverse.fibers.SuspendExecution;
+import co.paralleluniverse.fibers.Suspendable;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
@@ -15,6 +17,7 @@ public class GossipServiceHandler implements GossipService.Iface {
     }
 
     @Override
+    @Suspendable
     public GossipResponse gossip(GossipRequest request) throws TException {
         log.debug("received gossip message");
         List<Digest> digests = state.getDeltaScuttle(request.getMax());

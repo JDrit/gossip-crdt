@@ -23,49 +23,32 @@ import java.util.regex.Pattern;
  */
 public class HttpRouter {
     private static final Logger log = LogManager.getLogger(HttpRouter.class);
+    private static final RequestHandler notFoundHandler = new RequestHandler() {};
     private final ArrayList<EndPointEntry> endPointEntries;
-
-    private static RequestHandler notFoundHandler = new RequestHandler() {};
 
     private HttpRouter(ArrayList<EndPointEntry> endPointEntries) {
         this.endPointEntries = endPointEntries;
     }
 
-    /**
-     * Takes the request and run the correct handler on it. This can suspend if needed to by the
-     * fiber scheduler
-     * @param request the request sent from the client
-     * @param address the address of the client that sent the request
-     * @param payload the payload that came with the request
-     * @return the response from the given handler
-     * @throws SuspendExecution
-     */
-    HttpResponse route(HttpRequest request, InetSocketAddress address, InputStream payload) throws SuspendExecution {
+    HttpResponse route(InetSocketAddress address, HttpMethod method, String uri) throws SuspendExecution {
         try {
-            final URI uri = new URI(request.getRequestLine().getUri());
-            final String path = uri.getPath();
-            final String query = uri.getQuery();
-            final HttpMethod method = HttpMethod.valueOf(request.getRequestLine().getMethod());
 
             for (EndPointEntry entry : endPointEntries) {
-                if (entry.getMethod().equals(method) && entry.getPattern().matcher(path).matches()) {
+                if (entry.getMethod().equals(method) && entry.getPattern().matcher(uri).matches()) {
                     switch (method) {
                         case GET:
-                            return entry.getHandler().handleGet(request, address);
+                            return entry.getHandler().handleGet(address, uri);
                         case PUT:
-                            return entry.getHandler().handlePut(request, address);
+                            return entry.getHandler().handlePut(address, uri);
                         case DELETE:
-                            return entry.getHandler().handleDelete(request, address);
+                            return entry.getHandler().handleDelete(address, uri);
                         case POST:
-                            return entry.getHandler().handlePost(request, address, payload);
+                            return entry.getHandler().handlePost(address, uri);
                     }
                 }
             }
-            log.debug("no handler found for path: " + path);
-            return notFoundHandler.handleGet(request, address);
-        } catch (URISyntaxException ex) {
-            log.error("uri syntax error", ex);
-            return Response.BAD_REQUEST;
+            log.debug("no handler found for path: " + uri);
+            return notFoundHandler.handleGet(address, uri);
         } catch (NullPointerException | IllegalArgumentException ex) {
             log.error("could not determine method type", ex);
             return Response.BAD_REQUEST;

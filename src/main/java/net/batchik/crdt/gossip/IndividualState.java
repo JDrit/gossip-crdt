@@ -4,6 +4,7 @@ import java.text.NumberFormat;
 import java.util.*;
 
 import co.paralleluniverse.fibers.SuspendExecution;
+import co.paralleluniverse.fibers.Suspendable;
 import co.paralleluniverse.strands.concurrent.ReentrantLock;
 import co.paralleluniverse.strands.concurrent.ReentrantReadWriteLock;
 import net.batchik.crdt.gossip.datatypes.GCounterUtil;
@@ -51,7 +52,7 @@ public class IndividualState {
         }
     }
 
-    void merge(String key, Object value, long version) {
+    void merge(String key, Object value, long version) throws SuspendExecution {
         lock.writeLock().lock();
 
         try {
@@ -88,7 +89,8 @@ public class IndividualState {
      * @param selfAddress the ID of r
      * @return the list of digests for this individual state
      */
-    List<Digest> getDeltaScuttle(long qMaxVersion, String selfAddress) {
+    @Suspendable
+    List<Digest> getDeltaScuttle(long qMaxVersion, String selfAddress)  {
         lock.readLock().lock();
         try {
             List<Digest> digests = new ArrayList<>();
@@ -123,7 +125,7 @@ public class IndividualState {
      * Gets the string message representing the local peers known state
      * @return string message
      */
-    public String getAllResponse() {
+    public String getAllResponse() throws SuspendExecution {
         lock.readLock().lock();
         try {
             StringBuilder builder = new StringBuilder();

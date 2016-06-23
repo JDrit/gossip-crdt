@@ -20,8 +20,7 @@ public class UpdateRequestHandler extends RequestHandler {
     }
 
     @Override
-    public HttpResponse handleGet(HttpRequest req, InetSocketAddress address) throws SuspendExecution {
-        String uri = req.getRequestLine().getUri();
+    public HttpResponse handleGet(InetSocketAddress address, String uri) throws SuspendExecution {
         if (uri.length() > 8) {
             String name = uri.substring(8);
             self.getState().incrementCounter(name);
